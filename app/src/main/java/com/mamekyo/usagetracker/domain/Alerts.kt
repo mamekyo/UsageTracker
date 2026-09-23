@@ -15,6 +15,8 @@ import com.mamekyo.usagetracker.R
 import com.mamekyo.usagetracker.data.AlertRule
 import com.mamekyo.usagetracker.data.AppState
 import com.mamekyo.usagetracker.data.Store
+import com.mamekyo.usagetracker.i18n.Locales
+import com.mamekyo.usagetracker.i18n.Texts
 import com.mamekyo.usagetracker.ui.MainActivity
 import kotlin.math.roundToInt
 
@@ -23,9 +25,11 @@ object Alerts {
 
     data class Trigger(val rule: AlertRule, val view: UsageView, val window: WindowView, val firedKey: String)
 
+    /** (Re)creates the channel; called again on language changes so its name follows the app language. */
     fun createChannel(context: Context) {
-        val channel = NotificationChannel(CHANNEL_ID, "用量提醒", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "剩餘用量低於設定門檻時通知"
+        val c = Locales.wrap(context)
+        val channel = NotificationChannel(CHANNEL_ID, c.getString(R.string.channel_name), NotificationManager.IMPORTANCE_HIGH).apply {
+            description = c.getString(R.string.channel_desc)
         }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
@@ -70,10 +74,11 @@ object Alerts {
     }
 
     private fun post(context: Context, trigger: Trigger, now: Long) {
+        val c = Locales.wrap(context)
         val window = trigger.window
         val remaining = window.remainingPercent.roundToInt().coerceIn(0, 100)
-        val title = "${trigger.view.title}：${window.label}用量偏低"
-        val text = "剩餘 $remaining%（門檻 ${trigger.rule.thresholdRemaining}%），${Format.resetText(window.resetsAt, now)}"
+        val title = c.getString(R.string.alert_title, Texts.viewTitle(c, trigger.view), Texts.window(c, window))
+        val text = c.getString(R.string.alert_text, remaining, trigger.rule.thresholdRemaining, Texts.resetText(c, window.resetsAt, now))
         val intent = PendingIntent.getActivity(
             context,
             0,
@@ -97,10 +102,11 @@ object Alerts {
     }
 
     fun sendTest(context: Context) {
+        val c = Locales.wrap(context)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_usage)
-            .setContentTitle("UsageTracker 測試通知")
-            .setContentText("通知設定正常運作")
+            .setContentTitle(c.getString(R.string.test_notification_title))
+            .setContentText(c.getString(R.string.test_notification_text))
             .setAutoCancel(true)
             .build()
         try {

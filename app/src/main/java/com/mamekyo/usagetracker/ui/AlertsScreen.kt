@@ -1,6 +1,7 @@
 package com.mamekyo.usagetracker.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -37,15 +38,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.mamekyo.usagetracker.R
 import com.mamekyo.usagetracker.data.AlertRule
 import com.mamekyo.usagetracker.data.AppState
 import com.mamekyo.usagetracker.data.Provider
 import com.mamekyo.usagetracker.data.Source
 import com.mamekyo.usagetracker.domain.Aggregator
 import com.mamekyo.usagetracker.domain.Alerts
+import com.mamekyo.usagetracker.i18n.Texts
 import java.util.UUID
 import kotlin.math.roundToInt
 
@@ -74,7 +78,7 @@ fun AlertsScreen(state: AppState, vm: MainViewModel, showNewRule: Boolean, onNew
             item(key = "permission") {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("通知權限尚未開啟，提醒將無法顯示。", color = MaterialTheme.colorScheme.onErrorContainer)
+                        Text(stringResource(R.string.notif_permission_off), color = MaterialTheme.colorScheme.onErrorContainer)
                         Button(onClick = {
                             val needsRuntime = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -87,14 +91,14 @@ fun AlertsScreen(state: AppState, vm: MainViewModel, showNewRule: Boolean, onNew
                                         .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
                                 )
                             }
-                        }) { Text("允許通知") }
+                        }) { Text(stringResource(R.string.allow_notifications)) }
                     }
                 }
             }
         }
         item(key = "intro") {
             Text(
-                "剩餘用量降到門檻以下時發送通知。同一個限制在回升到門檻以上（例如重置）前只會通知一次。檢查頻率與自動更新頻率相同。",
+                stringResource(R.string.alerts_intro),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -102,7 +106,7 @@ fun AlertsScreen(state: AppState, vm: MainViewModel, showNewRule: Boolean, onNew
         if (state.rules.isEmpty()) {
             item(key = "empty") {
                 Text(
-                    "尚未設定提醒，點右下角「新增提醒」。",
+                    stringResource(R.string.alerts_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(vertical = 24.dp),
                 )
@@ -119,7 +123,7 @@ fun AlertsScreen(state: AppState, vm: MainViewModel, showNewRule: Boolean, onNew
             )
         }
         item(key = "test") {
-            TextButton(onClick = vm::sendTestNotification) { Text("發送測試通知") }
+            TextButton(onClick = vm::sendTestNotification) { Text(stringResource(R.string.send_test_notification)) }
         }
     }
 
@@ -140,9 +144,10 @@ fun AlertsScreen(state: AppState, vm: MainViewModel, showNewRule: Boolean, onNew
     }
 }
 
-private fun windowLabel(rule: AlertRule, state: AppState, now: Long): String {
-    val key = rule.windowKey ?: return "所有限制"
-    return Aggregator.views(rule.source, state, now).firstOrNull()?.windows?.firstOrNull { it.key == key }?.label ?: key
+private fun windowLabel(c: Context, rule: AlertRule, state: AppState, now: Long): String {
+    val key = rule.windowKey ?: return c.getString(R.string.all_limits)
+    return Aggregator.views(rule.source, state, now).firstOrNull()?.windows?.firstOrNull { it.key == key }
+        ?.let { Texts.window(c, it) } ?: key
 }
 
 @Composable
@@ -154,6 +159,7 @@ private fun RuleCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val c = LocalContext.current
     val windows = Aggregator.views(rule.source, state, now).firstOrNull()?.windows.orEmpty()
         .filter { rule.windowKey == null || it.key == rule.windowKey }
     val lowest = windows.minByOrNull { it.remainingPercent }
@@ -161,14 +167,15 @@ private fun RuleCard(
         Column(Modifier.padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(Aggregator.sourceLabel(rule.source, state), style = MaterialTheme.typography.titleMedium)
+                    Text(Texts.source(c, rule.source, state), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "${windowLabel(rule, state, now)} · 剩餘 ≤ ${rule.thresholdRemaining}%（已使用 ≥ ${100 - rule.thresholdRemaining}%）",
+                        "${windowLabel(c, rule, state, now)} · " +
+                            stringResource(R.string.rule_threshold, rule.thresholdRemaining, 100 - rule.thresholdRemaining),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     lowest?.let {
                         Text(
-                            "目前：${it.label} 剩餘 ${it.remainingPercent.roundToInt()}%",
+                            stringResource(R.string.rule_current, Texts.window(c, it), it.remainingPercent.roundToInt()),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -177,8 +184,8 @@ private fun RuleCard(
                 Switch(checked = rule.enabled, onCheckedChange = onToggle)
             }
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = onEdit) { Text("編輯") }
-                TextButton(onClick = onDelete) { Text("刪除", color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = onEdit) { Text(stringResource(R.string.action_edit)) }
+                TextButton(onClick = onDelete) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) }
             }
         }
     }
@@ -186,6 +193,7 @@ private fun RuleCard(
 
 @Composable
 private fun RuleEditorDialog(state: AppState, initial: AlertRule?, onSave: (AlertRule) -> Unit, onDismiss: () -> Unit) {
+    val c = LocalContext.current
     val sources = buildList {
         Provider.entries.forEach { provider ->
             if (state.accounts.any { it.provider == provider }) add(Source.Merged(provider))
@@ -195,9 +203,9 @@ private fun RuleEditorDialog(state: AppState, initial: AlertRule?, onSave: (Aler
     if (sources.isEmpty()) {
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("新增提醒") },
-            text = { Text("請先到「帳號」頁新增帳號。") },
-            confirmButton = { TextButton(onClick = onDismiss) { Text("知道了") } },
+            title = { Text(stringResource(R.string.rule_new)) },
+            text = { Text(stringResource(R.string.rule_need_account)) },
+            confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_ok)) } },
         )
         return
     }
@@ -208,30 +216,30 @@ private fun RuleEditorDialog(state: AppState, initial: AlertRule?, onSave: (Aler
     val now = System.currentTimeMillis()
     val windows = Aggregator.views(source, state, now).firstOrNull()?.windows.orEmpty()
     val windowOptions = buildList<Pair<String?, String>> {
-        add(null to "所有限制")
-        windows.forEach { add(it.key to it.label) }
+        add(null to c.getString(R.string.all_limits))
+        windows.forEach { add(it.key to Texts.window(c, it)) }
         windowKey?.let { key -> if (windows.none { it.key == key }) add(key to key) }
     }
     val value = threshold.roundToInt()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "新增提醒" else "編輯提醒") },
+        title = { Text(stringResource(if (initial == null) R.string.rule_new else R.string.rule_edit)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("對象", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.rule_target), style = MaterialTheme.typography.titleSmall)
                 sources.forEach { option ->
-                    RadioRow(selected = option == source, title = Aggregator.sourceLabel(option, state)) {
+                    RadioRow(selected = option == source, title = Texts.source(c, option, state)) {
                         if (option != source) windowKey = null
                         source = option
                     }
                 }
-                Text("限制", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
+                Text(stringResource(R.string.rule_limit), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
                 windowOptions.forEach { (key, label) ->
                     RadioRow(selected = key == windowKey, title = label) { windowKey = key }
                 }
-                Text("門檻", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
-                Text("剩餘 ≤ $value%（已使用 ≥ ${100 - value}%）時通知", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.rule_threshold_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
+                Text(stringResource(R.string.rule_threshold_desc, value, 100 - value), style = MaterialTheme.typography.bodyMedium)
                 Slider(value = threshold, onValueChange = { threshold = it }, valueRange = 5f..95f, steps = 17)
             }
         },
@@ -246,8 +254,8 @@ private fun RuleEditorDialog(state: AppState, initial: AlertRule?, onSave: (Aler
                         enabled = initial?.enabled ?: true,
                     ),
                 )
-            }) { Text("儲存") }
+            }) { Text(stringResource(R.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }

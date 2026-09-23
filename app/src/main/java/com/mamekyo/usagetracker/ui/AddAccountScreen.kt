@@ -40,12 +40,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mamekyo.usagetracker.R
 import com.mamekyo.usagetracker.data.Provider
+import com.mamekyo.usagetracker.i18n.Texts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,9 +66,11 @@ fun AddAccountScreen(provider: Provider, onClose: () -> Unit, vm: LoginViewModel
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("新增 ${provider.displayName} 帳號") },
+                title = { Text(stringResource(R.string.add_account_title, provider.displayName)) },
                 navigationIcon = {
-                    IconButton(onClick = close) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回") }
+                    IconButton(onClick = close) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    }
                 },
             )
         },
@@ -89,9 +94,9 @@ fun AddAccountScreen(provider: Provider, onClose: () -> Unit, vm: LoginViewModel
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("使用無痕分頁登入", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.ephemeral_title), style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            "不沿用瀏覽器已登入的帳號，方便加入第二個帳號（需 Chrome 較新版本）。",
+                            stringResource(R.string.ephemeral_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -101,7 +106,7 @@ fun AddAccountScreen(provider: Provider, onClose: () -> Unit, vm: LoginViewModel
 
                 authUrl?.let { url ->
                     TextButton(onClick = { Clipboard.copy(context, "login url", url) }) {
-                        Text("複製登入網址（可貼到其他瀏覽器開啟）")
+                        Text(stringResource(R.string.copy_login_url))
                     }
                 }
             }
@@ -113,8 +118,8 @@ fun AddAccountScreen(provider: Provider, onClose: () -> Unit, vm: LoginViewModel
 private fun ClaudeSteps(vm: LoginViewModel, status: LoginViewModel.Status, ephemeral: Boolean) {
     BrowserLoginCard(
         step = "1",
-        description = "登入 Claude 帳號並按「Authorize」，完成後帳號會自動加入。",
-        fallbackHint = "若授權後沒有自動加入（例如瀏覽器顯示無法連線），請複製網址列的完整網址，或頁面顯示的授權碼，貼到下方：",
+        description = stringResource(R.string.claude_login_desc),
+        fallbackHint = stringResource(R.string.claude_fallback_hint),
         status = status,
         ephemeral = ephemeral,
         onStart = vm::startClaude,
@@ -126,8 +131,8 @@ private fun ClaudeSteps(vm: LoginViewModel, status: LoginViewModel.Status, ephem
 private fun OpenAiSteps(vm: LoginViewModel, status: LoginViewModel.Status, ephemeral: Boolean) {
     BrowserLoginCard(
         step = "A",
-        description = "在瀏覽器登入 ChatGPT 帳號，完成後帳號會自動加入。",
-        fallbackHint = "若登入後瀏覽器顯示「無法連上這個網站」，請複製網址列中以 http://localhost:1455 開頭的完整網址，貼到下方：",
+        description = stringResource(R.string.openai_login_desc),
+        fallbackHint = stringResource(R.string.openai_fallback_hint),
         status = status,
         ephemeral = ephemeral,
         onStart = vm::startOpenAiBrowser,
@@ -135,11 +140,11 @@ private fun OpenAiSteps(vm: LoginViewModel, status: LoginViewModel.Status, ephem
     )
     StepCard(
         "B",
-        "裝置代碼登入",
-        "瀏覽器登入不順時可改用此方式：取得代碼後到驗證頁面輸入。若出現錯誤，可能需先在 ChatGPT 網頁版「設定 → 安全性」啟用 Codex 裝置代碼登入。",
+        stringResource(R.string.device_login_title),
+        stringResource(R.string.device_login_desc),
     ) {
         OutlinedButton(onClick = vm::startOpenAiDevice, enabled = status !is LoginViewModel.Status.Working) {
-            Text("取得裝置代碼")
+            Text(stringResource(R.string.get_device_code))
         }
     }
 }
@@ -159,23 +164,23 @@ private fun BrowserLoginCard(
     var pasted by rememberSaveable { mutableStateOf("") }
     val busy = status is LoginViewModel.Status.Working
 
-    StepCard(step, "瀏覽器登入", description) {
+    StepCard(step, stringResource(R.string.browser_login_title), description) {
         Button(onClick = { onStart()?.let { Browser.open(context, it, ephemeral) } }, enabled = !busy) {
-            Text("開啟登入頁面")
+            Text(stringResource(R.string.open_login_page))
         }
         if (status is LoginViewModel.Status.Waiting) {
             Text(fallbackHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedTextField(
                 value = pasted,
                 onValueChange = { pasted = it },
-                label = { Text("網址或授權碼") },
+                label = { Text(stringResource(R.string.url_or_code)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { Clipboard.paste(context)?.let { pasted = it.trim() } }) { Text("從剪貼簿貼上") }
+                TextButton(onClick = { Clipboard.paste(context)?.let { pasted = it.trim() } }) { Text(stringResource(R.string.action_paste)) }
                 Spacer(Modifier.weight(1f))
-                OutlinedButton(onClick = { onSubmit(pasted) }, enabled = pasted.isNotBlank()) { Text("送出") }
+                OutlinedButton(onClick = { onSubmit(pasted) }, enabled = pasted.isNotBlank()) { Text(stringResource(R.string.action_submit)) }
             }
         }
     }
@@ -186,11 +191,11 @@ private fun StatusPanel(status: LoginViewModel.Status, ephemeral: Boolean, onDon
     val context = LocalContext.current
     when (status) {
         LoginViewModel.Status.Idle -> Unit
-        is LoginViewModel.Status.Waiting -> ProgressCard(status.message)
-        is LoginViewModel.Status.Working -> ProgressCard(status.message)
+        is LoginViewModel.Status.Waiting -> ProgressCard(stringResource(status.message))
+        is LoginViewModel.Status.Working -> ProgressCard(stringResource(status.message))
         is LoginViewModel.Status.DeviceCode -> Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("在驗證頁面輸入以下代碼：", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.device_code_prompt), style = MaterialTheme.typography.bodyMedium)
                 SelectionContainer {
                     Text(
                         status.code,
@@ -203,13 +208,15 @@ private fun StatusPanel(status: LoginViewModel.Status, ephemeral: Boolean, onDon
                     Button(onClick = {
                         Clipboard.copy(context, "device code", status.code)
                         Browser.open(context, status.url, ephemeral)
-                    }) { Text("複製並開啟驗證頁") }
-                    OutlinedButton(onClick = { Clipboard.copy(context, "device code", status.code) }) { Text("複製代碼") }
+                    }) { Text(stringResource(R.string.copy_and_open_verify)) }
+                    OutlinedButton(onClick = { Clipboard.copy(context, "device code", status.code) }) {
+                        Text(stringResource(R.string.copy_code))
+                    }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("等待授權中（代碼 15 分鐘內有效）", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.device_waiting), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -218,12 +225,12 @@ private fun StatusPanel(status: LoginViewModel.Status, ephemeral: Boolean, onDon
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("已加入帳號", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.account_added), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    listOfNotNull(status.account.displayName, status.account.plan).joinToString(" · "),
+                    listOfNotNull(Texts.accountName(context, status.account), status.account.plan).joinToString(" · "),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Button(onClick = onDone) { Text("完成") }
+                Button(onClick = onDone) { Text(stringResource(R.string.action_done)) }
             }
         }
         is LoginViewModel.Status.Failed -> Card(
@@ -231,7 +238,7 @@ private fun StatusPanel(status: LoginViewModel.Status, ephemeral: Boolean, onDon
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
         ) {
             Text(
-                status.message,
+                Texts.error(context, status.error),
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.padding(16.dp),
             )

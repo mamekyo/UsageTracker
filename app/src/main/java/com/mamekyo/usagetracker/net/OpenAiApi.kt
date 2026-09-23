@@ -6,7 +6,6 @@ import kotlinx.serialization.json.JsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
-import java.io.IOException
 
 /**
  * ChatGPT subscription (Plus/Pro/...) access through the Codex CLI OAuth client.
@@ -58,10 +57,10 @@ object OpenAiApi {
 
     /** Extracts `code` from a pasted callback URL (`http://localhost:1455/auth/callback?code=...&state=...`). */
     fun parseCallbackUrl(input: String, expectedState: String): String {
-        val url = input.trim().toHttpUrlOrNull() ?: throw IOException("請貼上完整的網址（以 http://localhost:1455 開頭）")
-        url.queryParameter("error")?.let { throw IOException(url.queryParameter("error_description") ?: it) }
-        val code = url.queryParameter("code") ?: throw IOException("網址中找不到 code 參數")
-        if (url.queryParameter("state") != expectedState) throw IOException("網址不屬於這次登入，請重新開始登入")
+        val url = input.trim().toHttpUrlOrNull() ?: throw LoginException(LoginException.Reason.CALLBACK_URL_INVALID)
+        url.queryParameter("error")?.let { throw LoginException(LoginException.Reason.DENIED, url.queryParameter("error_description") ?: it) }
+        val code = url.queryParameter("code") ?: throw LoginException(LoginException.Reason.CALLBACK_NO_CODE)
+        if (url.queryParameter("state") != expectedState) throw LoginException(LoginException.Reason.STATE_MISMATCH)
         return code
     }
 
@@ -77,11 +76,11 @@ object OpenAiApi {
                     .build(),
             )
         } catch (e: HttpException) {
-            if (e.code == 404) throw IOException("OpenAI 目前未開放裝置代碼登入，請改用瀏覽器登入") else throw e
+            if (e.code == 404) throw LoginException(LoginException.Reason.DEVICE_DISABLED) else throw e
         }
         return DeviceCode(
-            userCode = o.str("user_code") ?: o.str("usercode") ?: throw IOException("回應缺少 user_code"),
-            deviceAuthId = o.str("device_auth_id") ?: throw IOException("回應缺少 device_auth_id"),
+            userCode = o.str("user_code") ?: o.str("usercode") ?: throw LoginException(LoginException.Reason.BAD_RESPONSE, "user_code"),
+            deviceAuthId = o.str("device_auth_id") ?: throw LoginException(LoginException.Reason.BAD_RESPONSE, "device_auth_id"),
             intervalSeconds = (o.long("interval") ?: 5L).coerceIn(2L, 30L),
             verificationUrl = DEVICE_VERIFY_URL,
         )
@@ -98,13 +97,13 @@ object OpenAiApi {
                         .post(Http.jsonBody("device_auth_id" to device.deviceAuthId, "user_code" to device.userCode))
                         .build(),
                 )
-                val code = o.str("authorization_code") ?: throw IOException("回應缺少 authorization_code")
-                val verifier = o.str("code_verifier") ?: throw IOException("回應缺少 code_verifier")
+                val code = o.str("authorization_code") ?: throw LoginException(LoginException.Reason.BAD_RESPONSE, "authorization_code")
+                val verifier = o.str("code_verifier") ?: throw LoginException(LoginException.Reason.BAD_RESPONSE, "code_verifier")
                 return exchangeCode(code, verifier, DEVICE_REDIRECT_URI)
             } catch (e: HttpException) {
                 if (e.code != 403 && e.code != 404) throw e
             }
-            if (System.currentTimeMillis() > deadline) throw IOException("裝置代碼已過期（15 分鐘），請重新開始")
+            if (System.currentTimeMillis() > deadline) throw LoginException(LoginException.Reason.DEVICE_EXPIRED)
             delay(device.intervalSeconds * 1000)
         }
     }
@@ -157,14 +156,14 @@ object OpenAiApi {
                 val resetsAt = w.long("reset_at")?.takeIf { it > 0 }?.times(1000)
                     ?: w.long("reset_after_seconds")?.let { now + it * 1000 }
                 val baseKey = Windows.keyForSeconds(seconds)
-                val baseLabel = Windows.labelForSeconds(seconds)
                 windows += UsageWindow(
                     key = if (name == null) baseKey else "$name|$baseKey",
-                    label = if (name == null) baseLabel else "$name · $baseLabel",
+                    label = listOfNotNull(Windows.fallbackLabel(seconds), name).joinToString(" · "),
                     usedPercent = used.coerceIn(0.0, 100.0),
                     resetsAt = resetsAt,
                     windowSeconds = seconds,
                     order = if (name == null) Windows.orderForKey(baseKey) else 3,
+                    scope = name,
                 )
             }
         }
@@ -172,10 +171,10 @@ object OpenAiApi {
         addWindows(o.obj("rate_limit"), null)
         o.arr("additional_rate_limits")?.forEach { element ->
             val extra = element as? JsonObject ?: return@forEach
-            val name = extra.str("limit_name") ?: extra.str("metered_feature") ?: "其他"
+            val name = extra.str("limit_name") ?: extra.str("metered_feature") ?: "extra"
             addWindows(extra.obj("rate_limit"), name)
         }
-        val sorted = windows.distinctBy { it.key }.sortedWith(compareBy<UsageWindow> { it.order }.thenBy { it.label })
+        val sorted = windows.distinctBy { it.key }.sortedWith(compareBy<UsageWindow> { it.order }.thenBy { it.key })
         return sorted to o.str("plan_type")?.let(::planLabel)
     }
 
@@ -206,7 +205,7 @@ object OpenAiApi {
     }
 
     private fun tokenSet(o: JsonObject): TokenSet {
-        val access = o.str("access_token") ?: throw IOException("登入回應缺少 access_token")
+        val access = o.str("access_token") ?: throw LoginException(LoginException.Reason.BAD_RESPONSE, "access_token")
         val expiresAt = o.long("expires_in")?.let { System.currentTimeMillis() + it * 1000 } ?: Jwt.expiresAt(access)
         return TokenSet(
             accessToken = access,

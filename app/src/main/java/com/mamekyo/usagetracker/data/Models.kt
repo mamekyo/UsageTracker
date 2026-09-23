@@ -22,8 +22,9 @@ data class Account(
     val needsReauth: Boolean = false,
     val createdAt: Long = 0,
 ) {
-    val displayName: String
-        get() = nickname?.takeIf { it.isNotBlank() } ?: email ?: "${provider.displayName} 帳號"
+    /** User nickname, else email; null when neither is known (the UI then shows a generic name). */
+    val customName: String?
+        get() = nickname?.takeIf { it.isNotBlank() } ?: email
 }
 
 /** Secrets; persisted only inside the Keystore-encrypted credentials file. */
@@ -40,6 +41,8 @@ data class Credentials(
 /**
  * One rate-limit window as reported by a provider.
  * [key] is stable across accounts of the same provider so windows can be merged.
+ * Display text is built from [windowSeconds] and [scope] in the UI language; [label] is a
+ * language-neutral fallback for windows whose length is unknown.
  */
 @Serializable
 data class UsageWindow(
@@ -50,6 +53,8 @@ data class UsageWindow(
     val resetsAt: Long? = null,
     val windowSeconds: Long? = null,
     val order: Int = 0,
+    /** Model or limit name the window is restricted to, e.g. "Fable". */
+    val scope: String? = null,
 )
 
 @Serializable
@@ -69,6 +74,8 @@ enum class DisplayMode {
 data class Settings(
     val displayMode: DisplayMode = DisplayMode.REMAINING,
     val refreshMinutes: Int = 15,
+    /** BCP-47 tag chosen in the app; empty follows the system. Used before Android 13 only. */
+    val language: String = "",
 )
 
 /** What a widget or an alert rule looks at. */

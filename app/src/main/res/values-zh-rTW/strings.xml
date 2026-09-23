@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">AI 剩餘用量</string>
+    <string name="widget_description">顯示 OpenAI / Claude 訂閱的剩餘用量與重置時間</string>
+
+    <!-- Common actions -->
+    <string name="action_cancel">取消</string>
+    <string name="action_save">儲存</string>
+    <string name="action_delete">刪除</string>
+    <string name="action_edit">編輯</string>
+    <string name="action_rename">重新命名</string>
+    <string name="action_relogin">重新登入</string>
+    <string name="action_refresh">重新整理</string>
+    <string name="action_back">返回</string>
+    <string name="action_done">完成</string>
+    <string name="action_ok">知道了</string>
+    <string name="action_paste">從剪貼簿貼上</string>
+    <string name="action_submit">送出</string>
+    <string name="toast_copied">已複製</string>
+    <string name="toast_no_browser">找不到可用的瀏覽器</string>
+
+    <!-- Navigation -->
+    <string name="tab_usage">用量</string>
+    <string name="tab_accounts">帳號</string>
+    <string name="tab_alerts">通知</string>
+    <string name="tab_settings">設定</string>
+    <string name="title_usage">AI 用量</string>
+    <string name="title_accounts">帳號管理</string>
+    <string name="title_alerts">用量提醒</string>
+    <string name="title_settings">設定</string>
+    <string name="fab_add_account">新增帳號</string>
+    <string name="fab_add_alert">新增提醒</string>
+
+    <!-- Provider picker -->
+    <string name="provider_picker_title">新增哪一家的帳號？</string>
+    <string name="provider_openai_desc">Plus / Pro 訂閱：5 小時與每週限制</string>
+    <string name="provider_claude_desc">Pro / Max 訂閱：5 小時、每週及 Fable 等模型限制</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_empty_title">還沒有帳號</string>
+    <string name="dashboard_empty_body">登入 OpenAI 或 Claude 訂閱帳號，即可追蹤 5 小時與每週的剩餘用量。</string>
+    <string name="dashboard_footer">下拉可重新整理。百分比顯示方式可在「設定」切換。</string>
+    <string name="no_usage_data">尚無用量資料</string>
+    <plurals name="accounts_averaged">
+        <item quantity="other">%d 個帳號平均</item>
+    </plurals>
+    <string name="updated_at">更新於 %s</string>
+    <string name="not_updated">尚未更新</string>
+
+    <!-- Usage windows -->
+    <string name="window_five_hour">5 小時</string>
+    <string name="window_weekly">每週</string>
+    <plurals name="window_days">
+        <item quantity="other">%d 天</item>
+    </plurals>
+    <plurals name="window_hours">
+        <item quantity="other">%d 小時</item>
+    </plurals>
+    <plurals name="window_minutes">
+        <item quantity="other">%d 分鐘</item>
+    </plurals>
+
+    <!-- Percentages and resets -->
+    <string name="mode_remaining">剩餘</string>
+    <string name="mode_used">已使用</string>
+    <string name="percent_remaining">剩餘 %d%%</string>
+    <string name="percent_used">已使用 %d%%</string>
+    <string name="reset_in">%s後重置</string>
+    <string name="reset_not_started">尚未開始計算</string>
+    <string name="reset_not_started_short">未開始</string>
+    <string name="reset_soon">即將重置</string>
+    <string name="duration_days_hours">%1$d天%2$d小時</string>
+    <string name="duration_days">%d天</string>
+    <string name="duration_hours_minutes">%1$d小時%2$d分</string>
+    <string name="duration_hours">%d小時</string>
+    <string name="duration_minutes">%d分鐘</string>
+    <string name="duration_days_hours_short">%1$d天%2$d時</string>
+    <string name="duration_hours_minutes_short">%1$d時%2$d分</string>
+    <string name="duration_hours_short">%d時</string>
+    <string name="duration_minutes_short">%d分</string>
+
+    <!-- Accounts and merged views -->
+    <string name="account_default_name">%s 帳號</string>
+    <string name="merged_title">%s（合併）</string>
+    <plurals name="account_count">
+        <item quantity="other">%d 個帳號</item>
+    </plurals>
+    <plurals name="accounts_failed">
+        <item quantity="other">%d 個帳號更新失敗</item>
+    </plurals>
+    <plurals name="merged_short">
+        <item quantity="other">%1$s · %2$d 帳號合併</item>
+    </plurals>
+    <string name="source_all">全部（各家合併）</string>
+    <string name="source_deleted">已刪除的帳號</string>
+
+    <!-- Errors -->
+    <string name="error_reauth">登入已失效，請重新登入</string>
+    <string name="error_rate_limited">請求過於頻繁（HTTP 429），稍後會自動重試</string>
+    <string name="error_server">伺服器暫時無法使用（HTTP %d）</string>
+    <string name="error_http">HTTP %1$d：%2$s</string>
+    <string name="error_unknown">未知錯誤</string>
+    <string name="error_offline">無法連線，請檢查網路</string>
+    <string name="error_timeout">連線逾時，稍後會自動重試</string>
+    <string name="error_network">網路錯誤</string>
+    <string name="login_error_code_missing">請貼上授權碼</string>
+    <string name="login_error_state_mismatch">授權碼不屬於這次登入，請重新按「開啟登入頁面」再試一次</string>
+    <string name="login_error_code_invalid">授權碼無效或已過期，請重新開啟登入頁面取得新的授權碼（%s）</string>
+    <string name="login_error_bad_response">伺服器回應格式不正確（缺少 %s）</string>
+    <string name="login_error_port">無法使用本機連接埠 %s，請確認沒有其他程式占用</string>
+    <string name="login_error_denied">登入失敗：%s</string>
+    <string name="login_error_callback_url">請貼上完整的網址（以 http://localhost 開頭）</string>
+    <string name="login_error_callback_no_code">網址中找不到 code 參數</string>
+    <string name="login_error_device_disabled">OpenAI 目前未開放裝置代碼登入，請改用瀏覽器登入</string>
+    <string name="login_error_device_expired">裝置代碼已過期（15 分鐘），請重新開始</string>
+    <string name="login_error_start_first">請先按「開啟登入頁面」</string>
+
+    <!-- Sign-in progress -->
+    <string name="login_waiting_auto_claude">請在瀏覽器登入並按「Authorize」，完成後會自動加入帳號。</string>
+    <string name="login_waiting_manual_claude">在瀏覽器登入並按「Authorize」後，複製頁面顯示的授權碼，再回來貼到下方。</string>
+    <string name="login_waiting_openai">請在瀏覽器完成登入，完成後會自動加入帳號。</string>
+    <string name="login_verifying">正在驗證授權碼…</string>
+    <string name="login_finishing">正在完成登入…</string>
+    <string name="login_fetching_device_code">正在取得裝置代碼…</string>
+    <string name="login_loading_usage">登入成功，正在讀取用量…</string>
+
+    <!-- Browser pages served by the loopback listener -->
+    <string name="page_success_title">登入成功</string>
+    <string name="page_success_body">請回到 UsageTracker App，帳號會自動加入。</string>
+    <string name="page_failed_title">登入失敗</string>
+    <string name="page_mismatch_title">登入請求不符</string>
+    <string name="page_mismatch_body">請回到 UsageTracker 重新開始登入。</string>
+    <string name="page_missing_code">缺少授權碼。</string>
+    <string name="page_not_found">找不到頁面</string>
+    <string name="page_return">返回 UsageTracker</string>
+
+    <!-- Accounts screen -->
+    <string name="accounts_empty">尚未新增帳號。\n點右下角「新增帳號」登入 OpenAI 或 Claude。</string>
+    <string name="rename_label">顯示名稱</string>
+    <string name="delete_title">刪除帳號？</string>
+    <string name="delete_body">將從本機移除「%s」的登入資訊、用量紀錄以及只針對此帳號的提醒。</string>
+    <string name="tracked_limits">可追蹤的限制：%s</string>
+    <string name="tracked_limits_none">可追蹤的限制：尚未取得</string>
+    <string name="list_separator">、</string>
+    <string name="include_in_merge">納入合併計算</string>
+
+    <!-- Add account screen -->
+    <string name="add_account_title">新增 %s 帳號</string>
+    <string name="ephemeral_title">使用無痕分頁登入</string>
+    <string name="ephemeral_desc">不沿用瀏覽器已登入的帳號，方便加入第二個帳號（需 Chrome 較新版本）。</string>
+    <string name="copy_login_url">複製登入網址（可貼到其他瀏覽器開啟）</string>
+    <string name="browser_login_title">瀏覽器登入</string>
+    <string name="open_login_page">開啟登入頁面</string>
+    <string name="claude_login_desc">登入 Claude 帳號並按「Authorize」，完成後帳號會自動加入。</string>
+    <string name="claude_fallback_hint">若授權後沒有自動加入（例如瀏覽器顯示無法連線），請複製網址列的完整網址，或頁面顯示的授權碼，貼到下方：</string>
+    <string name="openai_login_desc">在瀏覽器登入 ChatGPT 帳號，完成後帳號會自動加入。</string>
+    <string name="openai_fallback_hint">若登入後瀏覽器顯示「無法連上這個網站」，請複製網址列中以 http://localhost:1455 開頭的完整網址，貼到下方：</string>
+    <string name="url_or_code">網址或授權碼</string>
+    <string name="device_login_title">裝置代碼登入</string>
+    <string name="device_login_desc">瀏覽器登入不順時可改用此方式：取得代碼後到驗證頁面輸入。若出現錯誤，可能需先在 ChatGPT 網頁版「設定 → 安全性」啟用 Codex 裝置代碼登入。</string>
+    <string name="get_device_code">取得裝置代碼</string>
+    <string name="device_code_prompt">在驗證頁面輸入以下代碼：</string>
+    <string name="copy_and_open_verify">複製並開啟驗證頁</string>
+    <string name="copy_code">複製代碼</string>
+    <string name="device_waiting">等待授權中（代碼 15 分鐘內有效）</string>
+    <string name="account_added">已加入帳號</string>
+
+    <!-- Alerts screen -->
+    <string name="notif_permission_off">通知權限尚未開啟，提醒將無法顯示。</string>
+    <string name="allow_notifications">允許通知</string>
+    <string name="alerts_intro">剩餘用量降到門檻以下時發送通知。同一個限制在回升到門檻以上（例如重置）前只會通知一次。檢查頻率與自動更新頻率相同。</string>
+    <string name="alerts_empty">尚未設定提醒，點右下角「新增提醒」。</string>
+    <string name="send_test_notification">發送測試通知</string>
+    <string name="all_limits">所有限制</string>
+    <string name="rule_threshold">剩餘 ≤ %1$d%%（已使用 ≥ %2$d%%）</string>
+    <string name="rule_current">目前：%1$s 剩餘 %2$d%%</string>
+    <string name="rule_new">新增提醒</string>
+    <string name="rule_edit">編輯提醒</string>
+    <string name="rule_need_account">請先到「帳號」頁新增帳號。</string>
+    <string name="rule_target">對象</string>
+    <string name="rule_limit">限制</string>
+    <string name="rule_threshold_title">門檻</string>
+    <string name="rule_threshold_desc">剩餘 ≤ %1$d%%（已使用 ≥ %2$d%%）時通知</string>
+
+    <!-- Notifications -->
+    <string name="channel_name">用量提醒</string>
+    <string name="channel_desc">剩餘用量低於設定門檻時通知</string>
+    <string name="alert_title">%1$s：%2$s用量偏低</string>
+    <string name="alert_text">剩餘 %1$d%%（門檻 %2$d%%），%3$s</string>
+    <string name="test_notification_title">UsageTracker 測試通知</string>
+    <string name="test_notification_text">通知設定正常運作</string>
+
+    <!-- Settings -->
+    <string name="settings_display">百分比顯示</string>
+    <string name="display_remaining">剩餘的 %</string>
+    <string name="display_remaining_desc">例：剩餘 70%，進度條顯示剩下的額度</string>
+    <string name="display_used">已使用的 %</string>
+    <string name="display_used_desc">例：已使用 30%，進度條顯示用掉的額度</string>
+    <string name="settings_refresh">自動更新</string>
+    <plurals name="refresh_every_minutes">
+        <item quantity="other">每 %d 分鐘</item>
+    </plurals>
+    <plurals name="refresh_every_hours">
+        <item quantity="other">每 %d 小時</item>
+    </plurals>
+    <string name="refresh_note">Android 限制背景更新最短 15 分鐘，省電模式下可能延後。上次更新：%s</string>
+    <string name="refresh_now">立即更新</string>
+    <string name="refreshing">更新中…</string>
+    <string name="settings_widget">主畫面小工具</string>
+    <string name="widget_help">在主畫面長按空白處 → 小工具 → UsageTracker，拖曳到主畫面後選擇要顯示的內容：全部、單一供應商（多帳號合併）或單一帳號，以及樣式：長條或圓餅（多個限制並排一行）。之後長按小工具即可重新設定。</string>
+    <string name="settings_language">語言</string>
+    <string name="language_system">跟隨系統</string>
+    <string name="settings_about">關於</string>
+    <string name="about_text">所有帳號與登入權杖只儲存在這支手機上，權杖以 Android Keystore 加密，不會上傳到其他伺服器。\n\n用量資料來自 OpenAI Codex 與 Claude Code 使用的非公開介面，官方調整時可能暫時失效。\n\n版本 %s</string>
+
+    <!-- Widget -->
+    <string name="widget_title_all">AI 用量</string>
+    <string name="widget_no_accounts">尚未新增帳號，點此開啟 App 登入</string>
+    <string name="widget_account_missing">所選帳號已不存在，請重新設定小工具</string>
+    <string name="widget_no_data">尚無資料，請稍候更新</string>
+    <string name="widget_updating">更新中…</string>
+
+    <!-- Widget configuration -->
+    <string name="widget_config_title">設定小工具</string>
+    <string name="widget_config_content">顯示內容</string>
+    <string name="widget_config_all_desc">每家各自合併所有帳號</string>
+    <string name="widget_config_no_accounts">尚未新增帳號。小工具會先顯示提示，登入後自動更新。</string>
+    <string name="widget_config_style">顯示樣式</string>
+    <string name="widget_style_bars">長條</string>
+    <string name="widget_style_bars_desc">每個限制一列：進度條、% 數與重置時間</string>
+    <string name="widget_style_rings">圓餅</string>
+    <string name="widget_style_rings_desc">多個限制並排成一行，適合較小的小工具</string>
+</resources>

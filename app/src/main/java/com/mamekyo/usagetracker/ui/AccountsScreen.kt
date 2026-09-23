@@ -27,13 +27,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mamekyo.usagetracker.R
 import com.mamekyo.usagetracker.data.Account
 import com.mamekyo.usagetracker.data.AccountUsage
 import com.mamekyo.usagetracker.data.AppState
 import com.mamekyo.usagetracker.data.Provider
+import com.mamekyo.usagetracker.domain.Aggregator
+import com.mamekyo.usagetracker.i18n.Texts
 
 @Composable
 fun AccountsScreen(state: AppState, vm: MainViewModel, onReauth: (Provider) -> Unit) {
@@ -43,7 +48,7 @@ fun AccountsScreen(state: AppState, vm: MainViewModel, onReauth: (Provider) -> U
     if (state.accounts.isEmpty()) {
         Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
-                "尚未新增帳號。\n點右下角「新增帳號」登入 OpenAI 或 Claude。",
+                stringResource(R.string.accounts_empty),
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -71,12 +76,12 @@ fun AccountsScreen(state: AppState, vm: MainViewModel, onReauth: (Provider) -> U
         var name by remember(account.id) { mutableStateOf(account.nickname.orEmpty()) }
         AlertDialog(
             onDismissRequest = { renaming = null },
-            title = { Text("重新命名") },
+            title = { Text(stringResource(R.string.action_rename)) },
             text = {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("顯示名稱") },
+                    label = { Text(stringResource(R.string.rename_label)) },
                     placeholder = { Text(account.email ?: "") },
                     singleLine = true,
                 )
@@ -85,24 +90,24 @@ fun AccountsScreen(state: AppState, vm: MainViewModel, onReauth: (Provider) -> U
                 TextButton(onClick = {
                     vm.rename(account.id, name)
                     renaming = null
-                }) { Text("儲存") }
+                }) { Text(stringResource(R.string.action_save)) }
             },
-            dismissButton = { TextButton(onClick = { renaming = null }) { Text("取消") } },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 
     deleting?.let { account ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("刪除帳號？") },
-            text = { Text("將從本機移除「${account.displayName}」的登入資訊、用量紀錄以及只針對此帳號的提醒。") },
+            title = { Text(stringResource(R.string.delete_title)) },
+            text = { Text(stringResource(R.string.delete_body, Texts.accountName(LocalContext.current, account))) },
             confirmButton = {
                 TextButton(onClick = {
                     vm.removeAccount(account.id)
                     deleting = null
-                }) { Text("刪除", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("取消") } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -116,6 +121,7 @@ private fun AccountCard(
     onReauth: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val c = LocalContext.current
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -123,7 +129,7 @@ private fun AccountCard(
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        account.displayName,
+                        Texts.accountName(c, account),
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -141,23 +147,24 @@ private fun AccountCard(
             }
             if (account.needsReauth) {
                 Spacer(Modifier.height(8.dp))
-                Text("登入已失效，請重新登入", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.error_reauth), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
             Spacer(Modifier.height(8.dp))
-            val tracked = usage?.windows.orEmpty().joinToString("、") { it.label }
+            val tracked = Aggregator.accountView(account, usage, System.currentTimeMillis()).windows
+                .joinToString(stringResource(R.string.list_separator)) { Texts.window(c, it) }
             Text(
-                if (tracked.isEmpty()) "可追蹤的限制：尚未取得" else "可追蹤的限制：$tracked",
+                if (tracked.isEmpty()) stringResource(R.string.tracked_limits_none) else stringResource(R.string.tracked_limits, tracked),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("納入合併計算", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.include_in_merge), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 Switch(checked = account.includeInMerge, onCheckedChange = onToggleMerge)
             }
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = onRename) { Text("重新命名") }
-                TextButton(onClick = onReauth) { Text("重新登入") }
-                TextButton(onClick = onDelete) { Text("刪除", color = MaterialTheme.colorScheme.error) }
+                TextButton(onClick = onRename) { Text(stringResource(R.string.action_rename)) }
+                TextButton(onClick = onReauth) { Text(stringResource(R.string.action_relogin)) }
+                TextButton(onClick = onDelete) { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) }
             }
         }
     }

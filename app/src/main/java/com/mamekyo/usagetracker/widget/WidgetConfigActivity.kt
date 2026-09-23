@@ -1,6 +1,7 @@
 package com.mamekyo.usagetracker.widget
 
 import android.appwidget.AppWidgetManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -25,21 +26,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.mamekyo.usagetracker.R
 import com.mamekyo.usagetracker.data.Provider
 import com.mamekyo.usagetracker.data.Source
 import com.mamekyo.usagetracker.data.Store
 import com.mamekyo.usagetracker.data.WidgetStyle
-import com.mamekyo.usagetracker.domain.Aggregator
+import com.mamekyo.usagetracker.i18n.Locales
+import com.mamekyo.usagetracker.i18n.Texts
 import com.mamekyo.usagetracker.ui.RadioRow
 import com.mamekyo.usagetracker.ui.theme.UsageTrackerTheme
 import kotlinx.coroutines.launch
 
 /** Lets the user pick what a widget shows: everything, one provider merged, or a single account. */
 class WidgetConfigActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase)
+        Locales.overrideConfiguration(newBase)?.let(::applyOverrideConfiguration)
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,7 +76,7 @@ class WidgetConfigActivity : ComponentActivity() {
                 }
                 val selected = options.firstOrNull { key(it) == selectedKey } ?: Source.All
 
-                Scaffold(topBar = { TopAppBar(title = { Text("設定小工具") }) }) { padding ->
+                Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.widget_config_title)) }) }) { padding ->
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -75,35 +85,40 @@ class WidgetConfigActivity : ComponentActivity() {
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        SectionTitle("顯示內容")
+                        SectionTitle(stringResource(R.string.widget_config_content))
                         options.forEach { option ->
                             RadioRow(
                                 selected = option == selected,
-                                title = Aggregator.sourceLabel(option, state),
+                                title = Texts.source(this@WidgetConfigActivity, option, state),
                                 subtitle = when (option) {
-                                    Source.All -> "每家各自合併所有帳號"
-                                    is Source.Merged -> "${state.accounts.count { it.provider == option.provider && it.includeInMerge }} 個帳號平均"
+                                    Source.All -> stringResource(R.string.widget_config_all_desc)
+                                    is Source.Merged -> state.accounts.count { it.provider == option.provider && it.includeInMerge }
+                                        .let { pluralStringResource(R.plurals.accounts_averaged, it, it) }
                                     is Source.Single -> state.accounts.firstOrNull { it.id == option.accountId }?.plan
                                 },
                             ) { selectedKey = key(option) }
                         }
                         if (state.accounts.isEmpty()) {
                             Text(
-                                "尚未新增帳號。小工具會先顯示提示，登入後自動更新。",
+                                stringResource(R.string.widget_config_no_accounts),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(vertical = 8.dp),
                             )
                         }
-                        SectionTitle("顯示樣式")
-                        RadioRow(style == WidgetStyle.BARS, "長條", "每個限制一列：進度條、% 數與重置時間") {
-                            style = WidgetStyle.BARS
-                        }
-                        RadioRow(style == WidgetStyle.RINGS, "圓餅", "多個限制並排成一行，適合較小的小工具") {
-                            style = WidgetStyle.RINGS
-                        }
+                        SectionTitle(stringResource(R.string.widget_config_style))
+                        RadioRow(
+                            style == WidgetStyle.BARS,
+                            stringResource(R.string.widget_style_bars),
+                            stringResource(R.string.widget_style_bars_desc),
+                        ) { style = WidgetStyle.BARS }
+                        RadioRow(
+                            style == WidgetStyle.RINGS,
+                            stringResource(R.string.widget_style_rings),
+                            stringResource(R.string.widget_style_rings_desc),
+                        ) { style = WidgetStyle.RINGS }
                         Button(onClick = { save(appWidgetId, selected, style) }, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
-                            Text("完成")
+                            Text(stringResource(R.string.action_done))
                         }
                     }
                 }

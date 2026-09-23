@@ -20,13 +20,26 @@ import java.net.Socket
 class LoopbackServer(
     private val requestedPort: Int,
     private val path: String,
+    private val pages: Pages,
 ) : Closeable {
+    /** Localized text for the small pages shown in the browser after the redirect. */
+    data class Pages(
+        val successTitle: String,
+        val successBody: String,
+        val failedTitle: String,
+        val mismatchTitle: String,
+        val mismatchBody: String,
+        val missingCode: String,
+        val notFound: String,
+        val returnLabel: String,
+    )
+
     private val sockets = mutableListOf<ServerSocket>()
 
     /** Binds IPv4 loopback (required) and IPv6 loopback on the same port (best effort); returns the port. */
     fun start(): Int {
         val primary = bind("127.0.0.1", requestedPort)
-            ?: throw IOException("無法使用本機連接埠 $requestedPort，請確認沒有其他程式占用")
+            ?: throw LoginException(LoginException.Reason.PORT_UNAVAILABLE, requestedPort.toString())
         sockets += primary
         bind("::1", primary.localPort)?.let { sockets += it }
         return primary.localPort
@@ -74,7 +87,7 @@ class LoopbackServer(
         val target = requestLine.split(' ').getOrNull(1).orEmpty()
         val url = "http://localhost$target".toHttpUrlOrNull()
         if (url == null || url.encodedPath != path) {
-            respond(socket, 404, page("找不到頁面", ""))
+            respond(socket, 404, page(pages.notFound, ""))
             return
         }
         val error = url.queryParameter("error")
@@ -82,14 +95,14 @@ class LoopbackServer(
         when {
             error != null -> {
                 val detail = url.queryParameter("error_description") ?: error
-                respond(socket, 400, page("登入失敗", detail))
-                result.completeExceptionally(IOException("登入失敗：$detail"))
+                respond(socket, 400, page(pages.failedTitle, detail))
+                result.completeExceptionally(LoginException(LoginException.Reason.DENIED, detail))
             }
             url.queryParameter("state") != expectedState ->
-                respond(socket, 400, page("登入請求不符", "請回到 UsageTracker 重新開始登入。"))
-            code.isNullOrBlank() -> respond(socket, 400, page("登入失敗", "缺少授權碼。"))
+                respond(socket, 400, page(pages.mismatchTitle, pages.mismatchBody))
+            code.isNullOrBlank() -> respond(socket, 400, page(pages.failedTitle, pages.missingCode))
             else -> {
-                respond(socket, 200, page("登入成功", "請回到 UsageTracker App，帳號會自動加入。", showReturn = true))
+                respond(socket, 200, page(pages.successTitle, pages.successBody, showReturn = true))
                 result.complete(code)
             }
         }
@@ -116,14 +129,14 @@ class LoopbackServer(
 
     private fun page(title: String, message: String, showReturn: Boolean = false): String {
         val button = if (showReturn) {
-            """<p><a href="usagetracker://login-complete" style="display:inline-block;padding:12px 24px;border-radius:24px;background:#10a37f;color:#fff;text-decoration:none">返回 UsageTracker</a></p>"""
+            """<p><a href="usagetracker://login-complete" style="display:inline-block;padding:12px 24px;border-radius:24px;background:#10a37f;color:#fff;text-decoration:none">${pages.returnLabel.escapeHtml()}</a></p>"""
         } else {
             ""
         }
-        return """<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">""" +
-            """<meta name="viewport" content="width=device-width,initial-scale=1"><title>$title</title></head>""" +
+        return """<!doctype html><html><head><meta charset="utf-8">""" +
+            """<meta name="viewport" content="width=device-width,initial-scale=1"><title>${title.escapeHtml()}</title></head>""" +
             """<body style="font-family:sans-serif;text-align:center;padding:48px 24px">""" +
-            """<h2>$title</h2><p>${message.escapeHtml()}</p>$button</body></html>"""
+            """<h2>${title.escapeHtml()}</h2><p>${message.escapeHtml()}</p>$button</body></html>"""
     }
 
     private fun String.escapeHtml() = replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

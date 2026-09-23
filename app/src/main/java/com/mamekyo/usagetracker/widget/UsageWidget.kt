@@ -6,8 +6,12 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
@@ -20,11 +24,11 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.CircularProgressIndicator
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -66,8 +70,11 @@ import com.mamekyo.usagetracker.data.WidgetStyle
 import com.mamekyo.usagetracker.domain.Aggregator
 import com.mamekyo.usagetracker.domain.Format
 import com.mamekyo.usagetracker.domain.Level
+import com.mamekyo.usagetracker.domain.UsageRepository
 import com.mamekyo.usagetracker.domain.UsageView
 import com.mamekyo.usagetracker.domain.WindowView
+import com.mamekyo.usagetracker.i18n.Locales
+import com.mamekyo.usagetracker.i18n.Texts
 import com.mamekyo.usagetracker.ui.MainActivity
 import com.mamekyo.usagetracker.ui.theme.brandColor
 import com.mamekyo.usagetracker.ui.theme.color
@@ -80,14 +87,24 @@ class UsageWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val store = Store.get(context)
+        val repository = UsageRepository.get(context)
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         provideContent {
             val state by store.state.collectAsState()
-            WidgetContent(
-                state = state,
-                source = state.widgets[appWidgetId] ?: Source.All,
-                style = state.widgetStyles[appWidgetId] ?: WidgetStyle.BARS,
-            )
+            val refreshing by repository.refreshing.collectAsState()
+            val language by Locales.revision.collectAsState()
+            // A running session outlives language changes; rebuild the tree so every text is resolved again.
+            key(language) {
+                val texts = remember { Locales.wrap(context) }
+                CompositionLocalProvider(LocalTexts provides texts) {
+                    WidgetContent(
+                        state = state,
+                        source = state.widgets[appWidgetId] ?: Source.All,
+                        style = state.widgetStyles[appWidgetId] ?: WidgetStyle.BARS,
+                        refreshing = refreshing,
+                    )
+                }
+            }
         }
     }
 
@@ -111,13 +128,22 @@ class UsageWidgetReceiver : GlanceAppWidgetReceiver() {
 
 class RefreshAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val repository = UsageRepository.get(context)
+        // A refresh already in flight is showing its spinner and will clear it when done.
+        if (repository.refreshing.value) return
+        repository.markRefreshRequested()
+        UsageWidget.updateAll(context)
         RefreshWorker.refreshNow(context)
     }
 }
 
+/** Context used for widget text, carrying the app language. */
+private val LocalTexts = staticCompositionLocalOf<Context> { error("LocalTexts not provided") }
+
 // The widget always uses a white card, independent of the system dark theme.
 private val TextPrimary = ColorProvider(Color(0xFF1F2328))
 private val TextSecondary = ColorProvider(Color(0xFF6B7280))
+private val RefreshAccent = Color(0xFF3B82F6)
 
 private val HeaderHeight = 28.dp
 private val CompactHeaderHeight = 24.dp
@@ -125,7 +151,8 @@ private val SectionHeight = 20.dp
 private val BarRowHeight = 32.dp
 
 @Composable
-private fun WidgetContent(state: AppState, source: Source, style: WidgetStyle) {
+private fun WidgetContent(state: AppState, source: Source, style: WidgetStyle, refreshing: Boolean) {
+    val c = LocalTexts.current
     val now = System.currentTimeMillis()
     val views = Aggregator.views(source, state, now)
     val size = LocalSize.current
@@ -139,10 +166,10 @@ private fun WidgetContent(state: AppState, source: Source, style: WidgetStyle) {
             .cornerRadius(16.dp)
             .padding(horizontal = 12.dp, vertical = if (compact) 6.dp else 10.dp),
     ) {
-        Header(state, source, views, style, now, compact)
+        Header(state, source, views, style, now, compact, refreshing)
         when {
             views.isEmpty() -> Text(
-                text = if (state.accounts.isEmpty()) "尚未新增帳號，點此開啟 App 登入" else "所選帳號已不存在，請重新設定小工具",
+                text = c.getString(if (state.accounts.isEmpty()) R.string.widget_no_accounts else R.string.widget_account_missing),
                 style = TextStyle(color = TextSecondary, fontSize = 12.sp),
                 modifier = GlanceModifier.fillMaxWidth().padding(top = 6.dp).clickable(actionStartActivity<MainActivity>()),
             )
@@ -153,12 +180,26 @@ private fun WidgetContent(state: AppState, source: Source, style: WidgetStyle) {
 }
 
 @Composable
-private fun Header(state: AppState, source: Source, views: List<UsageView>, style: WidgetStyle, now: Long, compact: Boolean) {
+private fun Header(
+    state: AppState,
+    source: Source,
+    views: List<UsageView>,
+    style: WidgetStyle,
+    now: Long,
+    compact: Boolean,
+    refreshing: Boolean,
+) {
+    val c = LocalTexts.current
     val provider = if (source is Source.All) null else views.firstOrNull()?.provider
-    val meta = listOfNotNull(
-        Format.modeWord(state.settings.displayMode).takeIf { style == WidgetStyle.RINGS },
-        Format.clock(state.lastRefreshAt, now).takeIf { state.lastRefreshAt > 0 },
-    ).joinToString(" · ")
+    val meta = if (refreshing) {
+        c.getString(R.string.widget_updating)
+    } else {
+        listOfNotNull(
+            Texts.modeWord(c, state.settings.displayMode).takeIf { style == WidgetStyle.RINGS },
+            Format.clock(state.lastRefreshAt, now).takeIf { state.lastRefreshAt > 0 },
+        ).joinToString(" · ")
+    }
+    val buttonSize = if (compact) 22.dp else 26.dp
     Row(
         modifier = GlanceModifier.fillMaxWidth().height(if (compact) CompactHeaderHeight else HeaderHeight),
         verticalAlignment = Alignment.CenterVertically,
@@ -168,41 +209,41 @@ private fun Header(state: AppState, source: Source, views: List<UsageView>, styl
             Spacer(GlanceModifier.width(6.dp))
         }
         Text(
-            text = headerTitle(source, state, views),
+            text = headerTitle(c, source, state, views),
             style = TextStyle(color = TextPrimary, fontSize = if (compact) 12.sp else 13.sp, fontWeight = FontWeight.Bold),
             maxLines = 1,
             modifier = GlanceModifier.defaultWeight().clickable(actionStartActivity<MainActivity>()),
         )
-        if (views.any { it.error != null }) {
+        if (!refreshing && views.any { Texts.viewError(c, it) != null }) {
             Text(text = "⚠ ", style = TextStyle(color = ColorProvider(Level.CRITICAL.color()), fontSize = 11.sp))
         }
         if (meta.isNotEmpty()) {
             Text(text = meta, style = TextStyle(color = TextSecondary, fontSize = 10.sp), maxLines = 1)
         }
-        Image(
-            provider = ImageProvider(R.drawable.ic_refresh),
-            contentDescription = "重新整理",
-            colorFilter = ColorFilter.tint(TextSecondary),
-            modifier = GlanceModifier.size(if (compact) 22.dp else 26.dp).padding(4.dp).clickable(actionRunCallback<RefreshAction>()),
-        )
-    }
-}
-
-private fun headerTitle(source: Source, state: AppState, views: List<UsageView>): String {
-    val view = views.firstOrNull() ?: return Aggregator.sourceLabel(source, state)
-    return when (source) {
-        Source.All -> "AI 用量"
-        is Source.Merged -> if (view.accountCount > 1) {
-            "${view.provider.displayName} · ${view.accountCount} 帳號合併"
+        if (refreshing) {
+            // Spinning indicator replaces the button until the refresh finishes.
+            Box(modifier = GlanceModifier.size(buttonSize).padding(5.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = GlanceModifier.fillMaxSize(), color = ColorProvider(RefreshAccent))
+            }
         } else {
-            "${view.provider.displayName} · ${view.subtitle}"
+            Image(
+                provider = ImageProvider(R.drawable.ic_refresh),
+                contentDescription = c.getString(R.string.action_refresh),
+                colorFilter = ColorFilter.tint(TextSecondary),
+                modifier = GlanceModifier.size(buttonSize).padding(4.dp).clickable(actionRunCallback<RefreshAction>()),
+            )
         }
-        is Source.Single -> view.title
     }
 }
 
-private fun sectionTitle(view: UsageView): String =
-    if (view.accountCount > 1) "${view.provider.displayName} · ${view.accountCount} 帳號合併" else "${view.provider.displayName} · ${view.subtitle}"
+private fun headerTitle(c: Context, source: Source, state: AppState, views: List<UsageView>): String {
+    val view = views.firstOrNull() ?: return Texts.source(c, source, state)
+    return when (source) {
+        Source.All -> c.getString(R.string.widget_title_all)
+        is Source.Merged -> Texts.compactTitle(c, view)
+        is Source.Single -> Texts.viewTitle(c, view)
+    }
+}
 
 @Composable
 private fun Dot(provider: Provider) {
@@ -215,7 +256,7 @@ private fun SectionHeader(view: UsageView) {
         Dot(view.provider)
         Spacer(GlanceModifier.width(6.dp))
         Text(
-            text = sectionTitle(view),
+            text = Texts.compactTitle(LocalTexts.current, view),
             style = TextStyle(color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Medium),
             maxLines = 1,
         )
@@ -231,9 +272,16 @@ private fun ErrorLine(message: String) {
     )
 }
 
+@Composable
+private fun NoData(view: UsageView) {
+    val c = LocalTexts.current
+    Text(Texts.viewError(c, view) ?: c.getString(R.string.widget_no_data), style = TextStyle(color = TextSecondary, fontSize = 11.sp))
+}
+
 /** Rows spread evenly over the widget when they fit; otherwise the list scrolls. */
 @Composable
 private fun ColumnScope.BarsBody(views: List<UsageView>, mode: DisplayMode, now: Long, size: DpSize, compact: Boolean) {
+    val c = LocalTexts.current
     val sections = views.size > 1
     val rows = views.sumOf { it.windows.size.coerceAtLeast(1) }
     val available = size.height - (if (compact) 12.dp else 20.dp) - (if (compact) CompactHeaderHeight else HeaderHeight)
@@ -245,26 +293,24 @@ private fun ColumnScope.BarsBody(views: List<UsageView>, mode: DisplayMode, now:
         Column(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
             views.forEach { view ->
                 if (sections) SectionHeader(view)
-                if (view.windows.isEmpty()) {
-                    Text(view.error ?: "尚無資料，請稍候更新", style = TextStyle(color = TextSecondary, fontSize = 11.sp))
-                }
+                if (view.windows.isEmpty()) NoData(view)
                 view.windows.forEach { window ->
                     Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.CenterStart) {
                         BarRow(window, mode, now, scale)
                     }
                 }
-                if (view.error != null && view.windows.isNotEmpty()) ErrorLine(view.error)
+                val error = Texts.viewError(c, view)
+                if (error != null && view.windows.isNotEmpty()) ErrorLine(error)
             }
         }
     } else {
         LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
             views.forEach { view ->
                 if (sections) item { SectionHeader(view) }
-                if (view.windows.isEmpty()) {
-                    item { Text(view.error ?: "尚無資料，請稍候更新", style = TextStyle(color = TextSecondary, fontSize = 11.sp)) }
-                }
+                if (view.windows.isEmpty()) item { NoData(view) }
                 items(view.windows) { window -> BarRow(window, mode, now, 1f) }
-                if (view.error != null && view.windows.isNotEmpty()) item { ErrorLine(view.error) }
+                val error = Texts.viewError(c, view)
+                if (error != null && view.windows.isNotEmpty()) item { ErrorLine(error) }
             }
         }
     }
@@ -272,19 +318,20 @@ private fun ColumnScope.BarsBody(views: List<UsageView>, mode: DisplayMode, now:
 
 @Composable
 private fun BarRow(window: WindowView, mode: DisplayMode, now: Long, scale: Float) {
+    val c = LocalTexts.current
     val percent = Format.shownPercent(window.usedPercent, mode)
     val color = Format.level(window.usedPercent).color()
     Column(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 2.dp).clickable(actionStartActivity<MainActivity>())) {
         Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = window.label, style = TextStyle(color = TextPrimary, fontSize = (13 * scale).sp), maxLines = 1)
+            Text(text = Texts.window(c, window), style = TextStyle(color = TextPrimary, fontSize = (13 * scale).sp), maxLines = 1)
             Text(
-                text = Format.resetText(window.resetsAt, now, short = true),
+                text = Texts.resetText(c, window.resetsAt, now, short = true),
                 style = TextStyle(color = TextSecondary, fontSize = (10 * scale).sp),
                 maxLines = 1,
-                modifier = GlanceModifier.defaultWeight().padding(start = 6.dp),
+                modifier = GlanceModifier.defaultWeight().padding(start = 6.dp, end = 6.dp),
             )
             Text(
-                text = "${Format.modeWord(mode)} $percent%",
+                text = Texts.percent(c, percent, mode),
                 style = TextStyle(color = ColorProvider(color), fontSize = (13 * scale).sp, fontWeight = FontWeight.Bold),
             )
         }
@@ -316,9 +363,7 @@ private fun ColumnScope.RingsBody(views: List<UsageView>, mode: DisplayMode, now
                 modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (view.windows.isEmpty()) {
-                    Text(view.error ?: "尚無資料，請稍候更新", style = TextStyle(color = TextSecondary, fontSize = 11.sp))
-                }
+                if (view.windows.isEmpty()) NoData(view)
                 view.windows.forEach { window ->
                     Gauge(window, mode, now, ring, showReset, GlanceModifier.defaultWeight())
                 }
@@ -329,10 +374,11 @@ private fun ColumnScope.RingsBody(views: List<UsageView>, mode: DisplayMode, now
 
 @Composable
 private fun Gauge(window: WindowView, mode: DisplayMode, now: Long, ring: Dp, showReset: Boolean, modifier: GlanceModifier) {
-    val context = LocalContext.current
+    val c = LocalTexts.current
+    val label = Texts.window(c, window)
     val percent = Format.shownPercent(window.usedPercent, mode)
     val color = Format.level(window.usedPercent).color()
-    val px = (ring.value * context.resources.displayMetrics.density).roundToInt().coerceIn(48, 240)
+    val px = (ring.value * c.resources.displayMetrics.density).roundToInt().coerceIn(48, 240)
     Column(
         modifier = modifier.clickable(actionStartActivity<MainActivity>()),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -341,7 +387,7 @@ private fun Gauge(window: WindowView, mode: DisplayMode, now: Long, ring: Dp, sh
         Box(modifier = GlanceModifier.size(ring), contentAlignment = Alignment.Center) {
             Image(
                 provider = ImageProvider(ringBitmap(percent / 100f, color.toArgb(), px)),
-                contentDescription = "${window.label} ${Format.modeWord(mode)} $percent%",
+                contentDescription = "$label ${Texts.percent(c, percent, mode)}",
                 modifier = GlanceModifier.size(ring),
             )
             Text(
@@ -350,10 +396,10 @@ private fun Gauge(window: WindowView, mode: DisplayMode, now: Long, ring: Dp, sh
                 maxLines = 1,
             )
         }
-        Text(text = window.label, style = TextStyle(color = TextPrimary, fontSize = 11.sp), maxLines = 1)
+        Text(text = label, style = TextStyle(color = TextPrimary, fontSize = 11.sp), maxLines = 1)
         if (showReset) {
             Text(
-                text = Format.resetText(window.resetsAt, now, short = true),
+                text = Texts.resetText(c, window.resetsAt, now, short = true),
                 style = TextStyle(color = TextSecondary, fontSize = 9.sp),
                 maxLines = 1,
             )

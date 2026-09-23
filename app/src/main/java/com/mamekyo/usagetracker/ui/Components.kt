@@ -32,16 +32,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import com.mamekyo.usagetracker.R
 import com.mamekyo.usagetracker.data.DisplayMode
 import com.mamekyo.usagetracker.data.Provider
 import com.mamekyo.usagetracker.domain.Format
 import com.mamekyo.usagetracker.domain.UsageView
 import com.mamekyo.usagetracker.domain.WindowView
+import com.mamekyo.usagetracker.i18n.Texts
 import com.mamekyo.usagetracker.ui.theme.brandColor
 import com.mamekyo.usagetracker.ui.theme.color
 import kotlinx.coroutines.delay
@@ -68,6 +73,8 @@ fun UsageCard(
     modifier: Modifier = Modifier,
     onReauth: (() -> Unit)? = null,
 ) {
+    val c = LocalContext.current
+    val error = Texts.viewError(c, view)
     Card(modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -75,40 +82,44 @@ fun UsageCard(
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        view.title,
+                        Texts.viewTitle(c, view),
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    view.subtitle?.let {
+                    Texts.viewSubtitle(c, view)?.let {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 Text(
-                    Format.updatedText(view.fetchedAt, now),
+                    Texts.updated(c, view.fetchedAt, now),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (view.windows.isEmpty() && view.error == null) {
+            if (view.windows.isEmpty() && error == null) {
                 Spacer(Modifier.height(12.dp))
-                Text("尚無用量資料", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.no_usage_data),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             view.windows.forEach { window ->
                 Spacer(Modifier.height(12.dp))
                 WindowRow(window, mode, now, showAccountCount = view.accountCount > 1)
             }
-            view.error?.let { error ->
+            error?.let {
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "⚠ $error",
+                        "⚠ $it",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.weight(1f),
                     )
                     if (view.needsReauth && onReauth != null) {
-                        TextButton(onClick = onReauth) { Text("重新登入") }
+                        TextButton(onClick = onReauth) { Text(stringResource(R.string.action_relogin)) }
                     }
                 }
             }
@@ -118,13 +129,14 @@ fun UsageCard(
 
 @Composable
 fun WindowRow(window: WindowView, mode: DisplayMode, now: Long, showAccountCount: Boolean = false) {
+    val c = LocalContext.current
     val percent = Format.shownPercent(window.usedPercent, mode)
     val color = Format.level(window.usedPercent).color()
     Column {
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(window.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text(Texts.window(c, window), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Text(
-                "${Format.modeWord(mode)} $percent%",
+                Texts.percent(c, percent, mode),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = color,
@@ -143,13 +155,13 @@ fun WindowRow(window: WindowView, mode: DisplayMode, now: Long, showAccountCount
         Spacer(Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text(
-                Format.resetText(window.resetsAt, now),
+                Texts.resetText(c, window.resetsAt, now),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (showAccountCount) {
                 Text(
-                    "${window.accountCount} 個帳號平均",
+                    pluralStringResource(R.plurals.accounts_averaged, window.accountCount, window.accountCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -188,7 +200,7 @@ object Browser {
         try {
             intent.launchUrl(context, url.toUri())
         } catch (_: ActivityNotFoundException) {
-            Toast.makeText(context, "找不到可用的瀏覽器", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.toast_no_browser), Toast.LENGTH_LONG).show()
         }
     }
 }
@@ -196,7 +208,7 @@ object Browser {
 object Clipboard {
     fun copy(context: Context, label: String, text: String) {
         context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(label, text))
-        Toast.makeText(context, "已複製", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.toast_copied), Toast.LENGTH_SHORT).show()
     }
 
     fun paste(context: Context): String? =

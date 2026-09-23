@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">AI 使用量</string>
+    <string name="widget_description">OpenAI / Claude サブスクリプションの残り使用量とリセット時刻を表示</string>
+
+    <!-- Common actions -->
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_save">保存</string>
+    <string name="action_delete">削除</string>
+    <string name="action_edit">編集</string>
+    <string name="action_rename">名前を変更</string>
+    <string name="action_relogin">再ログイン</string>
+    <string name="action_refresh">更新</string>
+    <string name="action_back">戻る</string>
+    <string name="action_done">完了</string>
+    <string name="action_ok">OK</string>
+    <string name="action_paste">クリップボードから貼り付け</string>
+    <string name="action_submit">送信</string>
+    <string name="toast_copied">コピーしました</string>
+    <string name="toast_no_browser">利用できるブラウザがありません</string>
+
+    <!-- Navigation -->
+    <string name="tab_usage">使用量</string>
+    <string name="tab_accounts">アカウント</string>
+    <string name="tab_alerts">アラート</string>
+    <string name="tab_settings">設定</string>
+    <string name="title_usage">AI 使用量</string>
+    <string name="title_accounts">アカウント</string>
+    <string name="title_alerts">使用量アラート</string>
+    <string name="title_settings">設定</string>
+    <string name="fab_add_account">アカウントを追加</string>
+    <string name="fab_add_alert">アラートを追加</string>
+
+    <!-- Provider picker -->
+    <string name="provider_picker_title">追加するアカウント</string>
+    <string name="provider_openai_desc">Plus / Pro：5時間・週間の制限</string>
+    <string name="provider_claude_desc">Pro / Max：5時間・週間・Fable などモデル別の制限</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_empty_title">アカウントがありません</string>
+    <string name="dashboard_empty_body">OpenAI または Claude のサブスクリプションにログインすると、5時間・週間の残り使用量を確認できます。</string>
+    <string name="dashboard_footer">下に引っ張って更新。残り・使用済みの % 表示は「設定」で切り替えられます。</string>
+    <string name="no_usage_data">使用量データがまだありません</string>
+    <plurals name="accounts_averaged">
+        <item quantity="other">%d 件のアカウントの平均</item>
+    </plurals>
+    <string name="updated_at">%s に更新</string>
+    <string name="not_updated">未更新</string>
+
+    <!-- Usage windows -->
+    <string name="window_five_hour">5時間</string>
+    <string name="window_weekly">週間</string>
+    <plurals name="window_days">
+        <item quantity="other">%d日</item>
+    </plurals>
+    <plurals name="window_hours">
+        <item quantity="other">%d時間</item>
+    </plurals>
+    <plurals name="window_minutes">
+        <item quantity="other">%d分</item>
+    </plurals>
+
+    <!-- Percentages and resets -->
+    <string name="mode_remaining">残り</string>
+    <string name="mode_used">使用済み</string>
+    <string name="percent_remaining">残り %d%%</string>
+    <string name="percent_used">使用済み %d%%</string>
+    <string name="reset_in">%s後にリセット</string>
+    <string name="reset_not_started">まだ開始していません</string>
+    <string name="reset_not_started_short">未開始</string>
+    <string name="reset_soon">まもなくリセット</string>
+    <string name="duration_days_hours">%1$d日%2$d時間</string>
+    <string name="duration_days">%d日</string>
+    <string name="duration_hours_minutes">%1$d時間%2$d分</string>
+    <string name="duration_hours">%d時間</string>
+    <string name="duration_minutes">%d分</string>
+    <string name="duration_days_hours_short">%1$d日%2$d時間</string>
+    <string name="duration_hours_minutes_short">%1$d時間%2$d分</string>
+    <string name="duration_hours_short">%d時間</string>
+    <string name="duration_minutes_short">%d分</string>
+
+    <!-- Accounts and merged views -->
+    <string name="account_default_name">%s アカウント</string>
+    <string name="merged_title">%s（統合）</string>
+    <plurals name="account_count">
+        <item quantity="other">%d 件のアカウント</item>
+    </plurals>
+    <plurals name="accounts_failed">
+        <item quantity="other">%d 件のアカウントを更新できませんでした</item>
+    </plurals>
+    <plurals name="merged_short">
+        <item quantity="other">%1$s · %2$d 件を統合</item>
+    </plurals>
+    <string name="source_all">すべて（プロバイダごとに統合）</string>
+    <string name="source_deleted">削除されたアカウント</string>
+
+    <!-- Errors -->
+    <string name="error_reauth">ログインが切れました。再ログインしてください</string>
+    <string name="error_rate_limited">リクエストが多すぎます（HTTP 429）。自動的に再試行します</string>
+    <string name="error_server">サーバーが一時的に利用できません（HTTP %d）</string>
+    <string name="error_http">HTTP %1$d：%2$s</string>
+    <string name="error_unknown">不明なエラー</string>
+    <string name="error_offline">接続できません。ネットワークを確認してください</string>
+    <string name="error_timeout">接続がタイムアウトしました。自動的に再試行します</string>
+    <string name="error_network">ネットワークエラー</string>
+    <string name="login_error_code_missing">認証コードを貼り付けてください</string>
+    <string name="login_error_state_mismatch">このコードは別のログインのものです。「ログインページを開く」をタップしてやり直してください</string>
+    <string name="login_error_code_invalid">認証コードが無効か期限切れです。ログインページを開き直して新しいコードを取得してください（%s）</string>
+    <string name="login_error_bad_response">サーバーの応答が不正です（%s がありません）</string>
+    <string name="login_error_port">ローカルポート %s を使用できません。他のアプリが使用していないか確認してください</string>
+    <string name="login_error_denied">ログインに失敗しました：%s</string>
+    <string name="login_error_callback_url">http://localhost で始まる完全なアドレスを貼り付けてください</string>
+    <string name="login_error_callback_no_code">アドレスに code パラメータがありません</string>
+    <string name="login_error_device_disabled">OpenAI のデバイスコードログインは利用できません。ブラウザでログインしてください</string>
+    <string name="login_error_device_expired">デバイスコードの有効期限（15分）が切れました。最初からやり直してください</string>
+    <string name="login_error_start_first">先に「ログインページを開く」をタップしてください</string>
+
+    <!-- Sign-in progress -->
+    <string name="login_waiting_auto_claude">ブラウザでログインして「Authorize」をタップしてください。アカウントは自動的に追加されます。</string>
+    <string name="login_waiting_manual_claude">ログインして「Authorize」をタップしたら、ページに表示されたコードをコピーして下に貼り付けてください。</string>
+    <string name="login_waiting_openai">ブラウザでログインを完了してください。アカウントは自動的に追加されます。</string>
+    <string name="login_verifying">認証コードを確認中…</string>
+    <string name="login_finishing">ログインを完了しています…</string>
+    <string name="login_fetching_device_code">デバイスコードを取得中…</string>
+    <string name="login_loading_usage">ログインしました。使用量を読み込み中…</string>
+
+    <!-- Browser pages served by the loopback listener -->
+    <string name="page_success_title">ログインしました</string>
+    <string name="page_success_body">UsageTracker アプリに戻ってください。アカウントは自動的に追加されます。</string>
+    <string name="page_failed_title">ログインに失敗しました</string>
+    <string name="page_mismatch_title">ログインリクエストが一致しません</string>
+    <string name="page_mismatch_body">UsageTracker に戻ってログインをやり直してください。</string>
+    <string name="page_missing_code">認証コードがありません。</string>
+    <string name="page_not_found">ページが見つかりません</string>
+    <string name="page_return">UsageTracker に戻る</string>
+
+    <!-- Accounts screen -->
+    <string name="accounts_empty">アカウントがありません。\n「アカウントを追加」をタップして OpenAI または Claude にログインしてください。</string>
+    <string name="rename_label">表示名</string>
+    <string name="delete_title">アカウントを削除しますか？</string>
+    <string name="delete_body">「%s」のログイン情報、使用量の履歴、このアカウント専用のアラートをこの端末から削除します。</string>
+    <string name="tracked_limits">追跡できる制限：%s</string>
+    <string name="tracked_limits_none">追跡できる制限：未取得</string>
+    <string name="list_separator">、</string>
+    <string name="include_in_merge">統合の集計に含める</string>
+
+    <!-- Add account screen -->
+    <string name="add_account_title">%s アカウントを追加</string>
+    <string name="ephemeral_title">シークレットタブでログイン</string>
+    <string name="ephemeral_desc">ブラウザでログイン済みのアカウントを使わないため、2つ目のアカウントを追加しやすくなります（新しめの Chrome が必要）。</string>
+    <string name="copy_login_url">ログインリンクをコピー（別のブラウザで開く場合）</string>
+    <string name="browser_login_title">ブラウザでログイン</string>
+    <string name="open_login_page">ログインページを開く</string>
+    <string name="claude_login_desc">Claude にログインして「Authorize」をタップしてください。アカウントは自動的に追加されます。</string>
+    <string name="claude_fallback_hint">自動的に追加されない場合（ブラウザが接続できないなど）は、アドレスバーの完全なアドレス、またはページに表示されたコードをコピーして下に貼り付けてください：</string>
+    <string name="openai_login_desc">ブラウザで ChatGPT にログインしてください。アカウントは自動的に追加されます。</string>
+    <string name="openai_fallback_hint">ログイン後にブラウザで「サイトにアクセスできません」と表示された場合は、アドレスバーの http://localhost:1455 で始まる完全なアドレスをコピーして下に貼り付けてください：</string>
+    <string name="url_or_code">アドレスまたはコード</string>
+    <string name="device_login_title">デバイスコードでログイン</string>
+    <string name="device_login_desc">ブラウザでログインできない場合に使用します。コードを取得して確認ページで入力してください。エラーになる場合は、Web 版 ChatGPT の「設定 → セキュリティ」で Codex のデバイスコードログインを有効にしてください。</string>
+    <string name="get_device_code">デバイスコードを取得</string>
+    <string name="device_code_prompt">確認ページでこのコードを入力してください：</string>
+    <string name="copy_and_open_verify">コピーして確認ページを開く</string>
+    <string name="copy_code">コードをコピー</string>
+    <string name="device_waiting">承認を待っています（コードの有効期限は15分）</string>
+    <string name="account_added">アカウントを追加しました</string>
+
+    <!-- Alerts screen -->
+    <string name="notif_permission_off">通知の権限がオフのため、アラートを表示できません。</string>
+    <string name="allow_notifications">通知を許可</string>
+    <string name="alerts_intro">残り使用量がしきい値まで減ると通知します。同じ制限はしきい値を上回るまで（リセット後など）1回だけ通知します。確認は自動更新の間隔で行われます。</string>
+    <string name="alerts_empty">アラートがありません。「アラートを追加」をタップしてください。</string>
+    <string name="send_test_notification">テスト通知を送信</string>
+    <string name="all_limits">すべての制限</string>
+    <string name="rule_threshold">残り %1$d%% 以下（使用済み %2$d%% 以上）</string>
+    <string name="rule_current">現在：%1$s 残り %2$d%%</string>
+    <string name="rule_new">新しいアラート</string>
+    <string name="rule_edit">アラートを編集</string>
+    <string name="rule_need_account">先に「アカウント」タブでアカウントを追加してください。</string>
+    <string name="rule_target">対象</string>
+    <string name="rule_limit">制限</string>
+    <string name="rule_threshold_title">しきい値</string>
+    <string name="rule_threshold_desc">残り %1$d%% 以下（使用済み %2$d%% 以上）で通知</string>
+
+    <!-- Notifications -->
+    <string name="channel_name">使用量アラート</string>
+    <string name="channel_desc">残り使用量がしきい値を下回ると通知します</string>
+    <string name="alert_title">%1$s：%2$sの使用量が残りわずかです</string>
+    <string name="alert_text">残り %1$d%%（しきい値 %2$d%%）。%3$s</string>
+    <string name="test_notification_title">UsageTracker テスト通知</string>
+    <string name="test_notification_text">通知は正常に動作しています</string>
+
+    <!-- Settings -->
+    <string name="settings_display">パーセント表示</string>
+    <string name="display_remaining">残りの %</string>
+    <string name="display_remaining_desc">例：残り 70%。バーは残りの量を表示</string>
+    <string name="display_used">使用済みの %</string>
+    <string name="display_used_desc">例：使用済み 30%。バーは使用した量を表示</string>
+    <string name="settings_refresh">自動更新</string>
+    <plurals name="refresh_every_minutes">
+        <item quantity="other">%d分ごと</item>
+    </plurals>
+    <plurals name="refresh_every_hours">
+        <item quantity="other">%d時間ごと</item>
+    </plurals>
+    <string name="refresh_note">Android のバックグラウンド更新は最短15分間隔で、省電力モードでは遅れることがあります。最終更新：%s</string>
+    <string name="refresh_now">今すぐ更新</string>
+    <string name="refreshing">更新中…</string>
+    <string name="settings_widget">ホーム画面ウィジェット</string>
+    <string name="widget_help">ホーム画面の空いている場所を長押し → ウィジェット → UsageTracker。配置後、表示内容（すべて、アカウントを統合した1つのプロバイダ、または1つのアカウント）とスタイル（バー、または複数の制限を1行に並べるリング）を選びます。あとで変更するにはウィジェットを長押ししてください。</string>
+    <string name="settings_language">言語</string>
+    <string name="language_system">システムの設定に従う</string>
+    <string name="settings_about">このアプリについて</string>
+    <string name="about_text">アカウントとログイントークンはこのスマートフォンにのみ保存されます。トークンは Android Keystore で暗号化され、他のサーバーに送信されることはありません。\n\n使用量データは OpenAI Codex と Claude Code が使用する非公開のエンドポイントから取得しているため、仕様変更により一時的に利用できなくなることがあります。\n\nバージョン %s</string>
+
+    <!-- Widget -->
+    <string name="widget_title_all">AI 使用量</string>
+    <string name="widget_no_accounts">アカウントがありません。タップしてアプリを開き、ログインしてください</string>
+    <string name="widget_account_missing">選択したアカウントは存在しません。ウィジェットを再設定してください</string>
+    <string name="widget_no_data">データはまだありません。まもなく更新されます</string>
+    <string name="widget_updating">更新中…</string>
+
+    <!-- Widget configuration -->
+    <string name="widget_config_title">ウィジェットの設定</string>
+    <string name="widget_config_content">表示内容</string>
+    <string name="widget_config_all_desc">プロバイダごとにすべてのアカウントを統合</string>
+    <string name="widget_config_no_accounts">アカウントがありません。ウィジェットにはヒントが表示され、ログイン後に更新されます。</string>
+    <string name="widget_config_style">スタイル</string>
+    <string name="widget_style_bars">バー</string>
+    <string name="widget_style_bars_desc">制限ごとに1行：プログレスバー、% とリセット時刻</string>
+    <string name="widget_style_rings">リング</string>
+    <string name="widget_style_rings_desc">複数の制限を1行に並べて表示。小さいウィジェット向け</string>
+</resources>

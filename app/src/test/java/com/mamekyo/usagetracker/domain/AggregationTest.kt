@@ -109,11 +109,10 @@ class AggregationTest {
     }
 
     @Test
-    fun durationFormatting() {
-        assertEquals("2小時15分", Format.duration(2 * hour + 15 * 60_000))
-        assertEquals("3天4小時", Format.duration(76 * hour))
-        assertEquals("1分鐘", Format.duration(10_000))
-        assertEquals("3天19時後重置", Format.resetText(now + 91 * hour, now, short = true))
+    fun durationSplitsIntoDaysHoursMinutesRoundingUp() {
+        assertEquals(Format.DurationParts(0, 2, 15), Format.durationParts(2 * hour + 15 * 60_000))
+        assertEquals(Format.DurationParts(3, 4, 0), Format.durationParts(76 * hour))
+        assertEquals(Format.DurationParts(0, 0, 1), Format.durationParts(10_000))
         assertNull(Aggregator.mergedView(Provider.OPENAI, AppState(), now))
     }
 }

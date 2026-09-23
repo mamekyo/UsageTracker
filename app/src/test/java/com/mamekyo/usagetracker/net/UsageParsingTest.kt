@@ -36,7 +36,8 @@ class UsageParsingTest {
 
         assertEquals(listOf("five_hour", "seven_day", "seven_day:fable"), windows.map { it.key })
         assertEquals(listOf(9.0, 68.0, 100.0), windows.map { it.usedPercent })
-        assertEquals("每週 · Fable", windows[2].label)
+        assertEquals(listOf(null, null, "Fable"), windows.map { it.scope })
+        assertEquals(604_800L, windows[2].windowSeconds)
         // limits[] entries without resets_at inherit the flat keys' reset time.
         assertEquals(millis("2026-09-14T02:10:00Z"), windows[0].resetsAt)
         assertEquals(millis("2026-09-19T09:00:00.951713+00:00"), windows[1].resetsAt)
@@ -98,7 +99,8 @@ class UsageParsingTest {
         assertEquals(1_700_003_600_000L, windows[0].resetsAt)
         // reset_at of 0 falls back to reset_after_seconds.
         assertEquals(now + 259_200_000L, windows[1].resetsAt)
-        assertEquals("GPT-5-Codex-Spark · 5 小時", windows[2].label)
+        assertEquals("GPT-5-Codex-Spark", windows[2].scope)
+        assertEquals(18_000L, windows[2].windowSeconds)
     }
 
     @Test

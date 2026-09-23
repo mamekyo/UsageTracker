@@ -7,28 +7,36 @@ import com.mamekyo.usagetracker.data.Provider
 import com.mamekyo.usagetracker.data.Source
 import com.mamekyo.usagetracker.data.UsageWindow
 
+/** A window ready for display; text is produced by the UI layer from these fields. */
 data class WindowView(
     val key: String,
-    val label: String,
     val usedPercent: Double,
     val resetsAt: Long?,
     val order: Int,
     /** Accounts contributing to this window (1 for a single account). */
     val accountCount: Int = 1,
+    val windowSeconds: Long? = null,
+    val scope: String? = null,
+    val fallbackLabel: String = key,
 ) {
     val remainingPercent: Double get() = 100.0 - usedPercent
 }
 
 data class UsageView(
-    val title: String,
-    val subtitle: String?,
     val provider: Provider,
+    /** The account shown when the view covers exactly one account. */
+    val account: Account?,
+    /** Built as a provider merge rather than for a specific account. */
+    val merged: Boolean,
+    val accountCount: Int,
     val windows: List<WindowView>,
     /** Oldest successful fetch among contributing accounts; 0 when never fetched. */
     val fetchedAt: Long,
+    /** Last fetch error of the single account shown. */
     val error: String?,
+    /** Accounts whose last update failed or that need a new login. */
+    val failingCount: Int,
     val needsReauth: Boolean,
-    val accountCount: Int,
 )
 
 object Aggregator {
@@ -36,16 +44,21 @@ object Aggregator {
     fun effective(window: UsageWindow, now: Long): UsageWindow =
         if (window.resetsAt != null && window.resetsAt <= now) window.copy(usedPercent = 0.0, resetsAt = null) else window
 
-    fun accountView(account: Account, usage: AccountUsage?, now: Long): UsageView = UsageView(
-        title = account.displayName,
-        subtitle = account.plan?.let { "${account.provider.displayName} $it" } ?: account.provider.displayName,
+    private fun UsageWindow.toView(usedPercent: Double = this.usedPercent, resetsAt: Long? = this.resetsAt, accountCount: Int = 1) =
+        WindowView(key, usedPercent, resetsAt, order, accountCount, windowSeconds, scope, label)
+
+    private val windowOrder = compareBy<WindowView> { it.order }.thenBy { it.key }
+
+    fun accountView(account: Account, usage: AccountUsage?, now: Long, merged: Boolean = false): UsageView = UsageView(
         provider = account.provider,
-        windows = usage?.windows.orEmpty().map { effective(it, now) }
-            .map { WindowView(it.key, it.label, it.usedPercent, it.resetsAt, it.order) },
-        fetchedAt = usage?.fetchedAt ?: 0,
-        error = if (account.needsReauth) "登入已失效，請重新登入" else usage?.error,
-        needsReauth = account.needsReauth,
+        account = account,
+        merged = merged,
         accountCount = 1,
+        windows = usage?.windows.orEmpty().map { effective(it, now).toView() }.sortedWith(windowOrder),
+        fetchedAt = usage?.fetchedAt ?: 0,
+        error = usage?.error,
+        failingCount = if (account.needsReauth || usage?.error != null) 1 else 0,
+        needsReauth = account.needsReauth,
     )
 
     /**
@@ -58,36 +71,33 @@ object Aggregator {
         if (accounts.isEmpty()) return null
         if (accounts.size == 1) {
             val single = accounts.first()
-            return accountView(single, state.usage[single.id], now).copy(title = provider.displayName, subtitle = single.displayName)
+            return accountView(single, state.usage[single.id], now, merged = true)
         }
         val reporting = accounts.mapNotNull { account ->
-            state.usage[account.id]?.takeIf { it.windows.isNotEmpty() }?.let { account to it }
+            state.usage[account.id]?.takeIf { it.windows.isNotEmpty() }
         }
         val grouped = LinkedHashMap<String, MutableList<UsageWindow>>()
-        reporting.forEach { (_, usage) ->
+        reporting.forEach { usage ->
             usage.windows.forEach { grouped.getOrPut(it.key) { mutableListOf() } += effective(it, now) }
         }
-        val windows = grouped.map { (key, list) ->
-            WindowView(
-                key = key,
-                label = list.first().label,
+        val windows = grouped.values.map { list ->
+            list.first().toView(
                 usedPercent = list.sumOf { it.usedPercent } / list.size,
                 resetsAt = list.mapNotNull { it.resetsAt }.minOrNull(),
-                order = list.first().order,
                 accountCount = list.size,
             )
-        }.sortedWith(compareBy<WindowView> { it.order }.thenBy { it.label })
+        }.sortedWith(windowOrder)
 
-        val failing = accounts.count { it.needsReauth || state.usage[it.id]?.error != null }
         return UsageView(
-            title = "${provider.displayName}（合併）",
-            subtitle = "${accounts.size} 個帳號",
             provider = provider,
-            windows = windows,
-            fetchedAt = reporting.minOfOrNull { it.second.fetchedAt } ?: 0,
-            error = if (failing > 0) "$failing 個帳號更新失敗" else null,
-            needsReauth = accounts.all { it.needsReauth },
+            account = null,
+            merged = true,
             accountCount = accounts.size,
+            windows = windows,
+            fetchedAt = reporting.minOfOrNull { it.fetchedAt } ?: 0,
+            error = null,
+            failingCount = accounts.count { it.needsReauth || state.usage[it.id]?.error != null },
+            needsReauth = accounts.all { it.needsReauth },
         )
     }
 
@@ -97,12 +107,5 @@ object Aggregator {
         is Source.Single -> state.accounts.firstOrNull { it.id == source.accountId }
             ?.let { listOf(accountView(it, state.usage[it.id], now)) }
             .orEmpty()
-    }
-
-    fun sourceLabel(source: Source, state: AppState): String = when (source) {
-        Source.All -> "全部（各家合併）"
-        is Source.Merged -> "${source.provider.displayName}（合併）"
-        is Source.Single -> state.accounts.firstOrNull { it.id == source.accountId }
-            ?.let { "${it.provider.displayName} · ${it.displayName}" } ?: "已刪除的帳號"
     }
 }

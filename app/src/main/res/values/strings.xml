@@ -1,6 +1,248 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">UsageTracker</string>
-    <string name="widget_name">AI 剩餘用量</string>
-    <string name="widget_description">顯示 OpenAI / Claude 訂閱的剩餘用量與重置時間</string>
+    <string name="app_name" translatable="false">UsageTracker</string>
+    <string name="widget_name">AI Usage</string>
+    <string name="widget_description">Remaining usage and reset times for OpenAI and Claude subscriptions</string>
+
+    <!-- Common actions -->
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_relogin">Sign in again</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_back">Back</string>
+    <string name="action_done">Done</string>
+    <string name="action_ok">OK</string>
+    <string name="action_paste">Paste from clipboard</string>
+    <string name="action_submit">Submit</string>
+    <string name="toast_copied">Copied</string>
+    <string name="toast_no_browser">No browser available</string>
+
+    <!-- Navigation -->
+    <string name="tab_usage">Usage</string>
+    <string name="tab_accounts">Accounts</string>
+    <string name="tab_alerts">Alerts</string>
+    <string name="tab_settings">Settings</string>
+    <string name="title_usage">AI Usage</string>
+    <string name="title_accounts">Accounts</string>
+    <string name="title_alerts">Usage alerts</string>
+    <string name="title_settings">Settings</string>
+    <string name="fab_add_account">Add account</string>
+    <string name="fab_add_alert">Add alert</string>
+
+    <!-- Provider picker -->
+    <string name="provider_picker_title">Add which account?</string>
+    <string name="provider_openai_name" translatable="false">OpenAI (ChatGPT)</string>
+    <string name="provider_openai_desc">Plus / Pro: 5-hour and weekly limits</string>
+    <string name="provider_claude_desc">Pro / Max: 5-hour, weekly and per-model limits such as Fable</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_empty_title">No accounts yet</string>
+    <string name="dashboard_empty_body">Sign in to an OpenAI or Claude subscription to track your remaining 5-hour and weekly usage.</string>
+    <string name="dashboard_footer">Pull down to refresh. Switch between remaining and used % in Settings.</string>
+    <string name="no_usage_data">No usage data yet</string>
+    <plurals name="accounts_averaged">
+        <item quantity="one">Average of %d account</item>
+        <item quantity="other">Average of %d accounts</item>
+    </plurals>
+    <string name="updated_at">Updated %s</string>
+    <string name="not_updated">Not updated yet</string>
+
+    <!-- Usage windows -->
+    <string name="window_five_hour">5-hour</string>
+    <string name="window_weekly">Weekly</string>
+    <plurals name="window_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="window_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="window_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+
+    <!-- Percentages and resets -->
+    <string name="mode_remaining">Left</string>
+    <string name="mode_used">Used</string>
+    <string name="percent_remaining">%d%% left</string>
+    <string name="percent_used">%d%% used</string>
+    <string name="reset_in">Resets in %s</string>
+    <string name="reset_not_started">Not started yet</string>
+    <string name="reset_not_started_short">Not started</string>
+    <string name="reset_soon">Resetting soon</string>
+    <string name="duration_days_hours">%1$dd %2$dh</string>
+    <string name="duration_days">%dd</string>
+    <string name="duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="duration_hours">%dh</string>
+    <string name="duration_minutes">%dm</string>
+    <string name="duration_days_hours_short">%1$dd %2$dh</string>
+    <string name="duration_hours_minutes_short">%1$dh %2$dm</string>
+    <string name="duration_hours_short">%dh</string>
+    <string name="duration_minutes_short">%dm</string>
+
+    <!-- Accounts and merged views -->
+    <string name="account_default_name">%s account</string>
+    <string name="merged_title">%s (merged)</string>
+    <plurals name="account_count">
+        <item quantity="one">%d account</item>
+        <item quantity="other">%d accounts</item>
+    </plurals>
+    <plurals name="accounts_failed">
+        <item quantity="one">%d account failed to update</item>
+        <item quantity="other">%d accounts failed to update</item>
+    </plurals>
+    <plurals name="merged_short">
+        <item quantity="one">%1$s · %2$d account merged</item>
+        <item quantity="other">%1$s · %2$d accounts merged</item>
+    </plurals>
+    <string name="source_all">All (merged per provider)</string>
+    <string name="source_deleted">Deleted account</string>
+
+    <!-- Errors -->
+    <string name="error_reauth">Signed out. Please sign in again</string>
+    <string name="error_rate_limited">Too many requests (HTTP 429). Will retry automatically</string>
+    <string name="error_server">Server temporarily unavailable (HTTP %d)</string>
+    <string name="error_http">HTTP %1$d: %2$s</string>
+    <string name="error_unknown">Unknown error</string>
+    <string name="error_offline">Can\'t connect. Check your network</string>
+    <string name="error_timeout">Connection timed out. Will retry automatically</string>
+    <string name="error_network">Network error</string>
+    <string name="login_error_code_missing">Paste the authorization code</string>
+    <string name="login_error_state_mismatch">This code belongs to a different sign-in. Tap “Open sign-in page” and try again</string>
+    <string name="login_error_code_invalid">The authorization code is invalid or expired. Open the sign-in page again to get a new one (%s)</string>
+    <string name="login_error_bad_response">Unexpected server response (missing %s)</string>
+    <string name="login_error_port">Can\'t use local port %s. Make sure no other app is using it</string>
+    <string name="login_error_denied">Sign-in failed: %s</string>
+    <string name="login_error_callback_url">Paste the full address starting with http://localhost</string>
+    <string name="login_error_callback_no_code">The address has no code parameter</string>
+    <string name="login_error_device_disabled">OpenAI device code sign-in isn\'t available. Use browser sign-in instead</string>
+    <string name="login_error_device_expired">The device code expired (15 minutes). Please start again</string>
+    <string name="login_error_start_first">Tap “Open sign-in page” first</string>
+
+    <!-- Sign-in progress -->
+    <string name="login_waiting_auto_claude">Sign in and tap “Authorize” in the browser. The account is added automatically.</string>
+    <string name="login_waiting_manual_claude">After signing in and tapping “Authorize”, copy the code shown on the page and paste it below.</string>
+    <string name="login_waiting_openai">Finish signing in in the browser. The account is added automatically.</string>
+    <string name="login_verifying">Verifying the authorization code…</string>
+    <string name="login_finishing">Completing sign-in…</string>
+    <string name="login_fetching_device_code">Getting a device code…</string>
+    <string name="login_loading_usage">Signed in. Loading usage…</string>
+
+    <!-- Browser pages served by the loopback listener -->
+    <string name="page_success_title">Signed in</string>
+    <string name="page_success_body">Return to the UsageTracker app. The account is added automatically.</string>
+    <string name="page_failed_title">Sign-in failed</string>
+    <string name="page_mismatch_title">Sign-in request mismatch</string>
+    <string name="page_mismatch_body">Go back to UsageTracker and start signing in again.</string>
+    <string name="page_missing_code">The authorization code is missing.</string>
+    <string name="page_not_found">Not found</string>
+    <string name="page_return">Return to UsageTracker</string>
+
+    <!-- Accounts screen -->
+    <string name="accounts_empty">No accounts yet.\nTap “Add account” to sign in to OpenAI or Claude.</string>
+    <string name="rename_label">Display name</string>
+    <string name="delete_title">Delete account?</string>
+    <string name="delete_body">Removes the sign-in, usage history and account-specific alerts for “%s” from this device.</string>
+    <string name="tracked_limits">Trackable limits: %s</string>
+    <string name="tracked_limits_none">Trackable limits: not fetched yet</string>
+    <string name="list_separator">,\u0020</string>
+    <string name="include_in_merge">Include in merged totals</string>
+
+    <!-- Add account screen -->
+    <string name="add_account_title">Add %s account</string>
+    <string name="ephemeral_title">Sign in with an incognito tab</string>
+    <string name="ephemeral_desc">Doesn\'t reuse accounts already signed in to the browser, so adding a second account is easy (needs a recent Chrome).</string>
+    <string name="copy_login_url">Copy sign-in link (to open in another browser)</string>
+    <string name="browser_login_title">Browser sign-in</string>
+    <string name="open_login_page">Open sign-in page</string>
+    <string name="claude_login_desc">Sign in to Claude and tap “Authorize”. The account is added automatically.</string>
+    <string name="claude_fallback_hint">If the account isn\'t added automatically (for example the browser can\'t connect), copy the full address from the address bar, or the code shown on the page, and paste it below:</string>
+    <string name="openai_login_desc">Sign in to ChatGPT in the browser. The account is added automatically.</string>
+    <string name="openai_fallback_hint">If the browser says it can\'t reach the site after signing in, copy the full address starting with http://localhost:1455 from the address bar and paste it below:</string>
+    <string name="url_or_code">Address or code</string>
+    <string name="device_login_title">Device code sign-in</string>
+    <string name="device_login_desc">Use this if browser sign-in doesn\'t work: get a code and enter it on the verification page. If you get an error, enable device code sign-in for Codex in ChatGPT on the web under Settings → Security.</string>
+    <string name="get_device_code">Get device code</string>
+    <string name="device_code_prompt">Enter this code on the verification page:</string>
+    <string name="copy_and_open_verify">Copy and open verification page</string>
+    <string name="copy_code">Copy code</string>
+    <string name="device_waiting">Waiting for approval (the code is valid for 15 minutes)</string>
+    <string name="account_added">Account added</string>
+
+    <!-- Alerts screen -->
+    <string name="notif_permission_off">Notification permission is off, so alerts can\'t be shown.</string>
+    <string name="allow_notifications">Allow notifications</string>
+    <string name="alerts_intro">Get notified when remaining usage drops to your threshold. Each limit notifies once until it recovers above the threshold (for example after a reset). Checked at the auto-refresh interval.</string>
+    <string name="alerts_empty">No alerts yet. Tap “Add alert”.</string>
+    <string name="send_test_notification">Send test notification</string>
+    <string name="all_limits">All limits</string>
+    <string name="rule_threshold">%1$d%% left or less (%2$d%% used or more)</string>
+    <string name="rule_current">Now: %1$s, %2$d%% left</string>
+    <string name="rule_new">New alert</string>
+    <string name="rule_edit">Edit alert</string>
+    <string name="rule_need_account">Add an account on the Accounts tab first.</string>
+    <string name="rule_target">Target</string>
+    <string name="rule_limit">Limit</string>
+    <string name="rule_threshold_title">Threshold</string>
+    <string name="rule_threshold_desc">Notify at %1$d%% left or less (%2$d%% used or more)</string>
+
+    <!-- Notifications -->
+    <string name="channel_name">Usage alerts</string>
+    <string name="channel_desc">Notifies when remaining usage falls below your threshold</string>
+    <string name="alert_title">%1$s: %2$s usage is low</string>
+    <string name="alert_text">%1$d%% left (threshold %2$d%%). %3$s</string>
+    <string name="test_notification_title">UsageTracker test notification</string>
+    <string name="test_notification_text">Notifications are working</string>
+
+    <!-- Settings -->
+    <string name="settings_display">Percentage display</string>
+    <string name="display_remaining">Remaining %</string>
+    <string name="display_remaining_desc">e.g. 70% left; bars show what is left</string>
+    <string name="display_used">Used %</string>
+    <string name="display_used_desc">e.g. 30% used; bars show what is used</string>
+    <string name="settings_refresh">Auto refresh</string>
+    <plurals name="refresh_every_minutes">
+        <item quantity="one">Every minute</item>
+        <item quantity="other">Every %d minutes</item>
+    </plurals>
+    <plurals name="refresh_every_hours">
+        <item quantity="one">Every hour</item>
+        <item quantity="other">Every %d hours</item>
+    </plurals>
+    <string name="refresh_note">Android refreshes in the background at most every 15 minutes, and battery saver may delay it. Last update: %s</string>
+    <string name="refresh_now">Refresh now</string>
+    <string name="refreshing">Refreshing…</string>
+    <string name="settings_widget">Home screen widget</string>
+    <string name="widget_help">Long-press an empty spot on the home screen → Widgets → UsageTracker. After placing it, choose what to show (everything, one provider with its accounts merged, or a single account) and the style: bars, or rings with several limits in one row. Long-press the widget later to change it.</string>
+    <string name="settings_language">Language</string>
+    <string name="language_system">System default</string>
+    <string name="language_zh_tw" translatable="false">繁體中文</string>
+    <string name="language_zh_cn" translatable="false">简体中文</string>
+    <string name="language_ja" translatable="false">日本語</string>
+    <string name="language_en" translatable="false">English</string>
+    <string name="settings_about">About</string>
+    <string name="about_text">Accounts and sign-in tokens are stored only on this phone. Tokens are encrypted with the Android Keystore and never sent to any other server.\n\nUsage data comes from undocumented endpoints used by OpenAI Codex and Claude Code, so it may break temporarily when they change.\n\nVersion %s</string>
+
+    <!-- Widget -->
+    <string name="widget_title_all">AI Usage</string>
+    <string name="widget_no_accounts">No accounts yet. Tap to open the app and sign in</string>
+    <string name="widget_account_missing">The selected account no longer exists. Reconfigure the widget</string>
+    <string name="widget_no_data">No data yet, updating soon</string>
+    <string name="widget_updating">Updating…</string>
+
+    <!-- Widget configuration -->
+    <string name="widget_config_title">Widget settings</string>
+    <string name="widget_config_content">Content</string>
+    <string name="widget_config_all_desc">Each provider merges all of its accounts</string>
+    <string name="widget_config_no_accounts">No accounts yet. The widget shows a hint and updates after you sign in.</string>
+    <string name="widget_config_style">Style</string>
+    <string name="widget_style_bars">Bars</string>
+    <string name="widget_style_bars_desc">One row per limit: progress bar, % and reset time</string>
+    <string name="widget_style_rings">Rings</string>
+    <string name="widget_style_rings_desc">Several limits side by side in one row, good for small widgets</string>
 </resources>

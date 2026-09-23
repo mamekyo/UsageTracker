@@ -21,8 +21,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.mamekyo.usagetracker.R
 import com.mamekyo.usagetracker.data.AppState
 import com.mamekyo.usagetracker.data.Provider
 import com.mamekyo.usagetracker.domain.Aggregator
@@ -46,16 +48,16 @@ fun DashboardScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("還沒有帳號", style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.dashboard_empty_title), style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "登入 OpenAI 或 Claude 訂閱帳號，即可追蹤 5 小時與每週的剩餘用量。",
+                    stringResource(R.string.dashboard_empty_body),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(24.dp))
-                Button(onClick = onAddAccount) { Text("新增帳號") }
+                Button(onClick = onAddAccount) { Text(stringResource(R.string.fab_add_account)) }
             }
             return@PullToRefreshBox
         }
@@ -91,7 +93,7 @@ fun DashboardScreen(
             }
             item(key = "footer") {
                 Text(
-                    "下拉可重新整理。百分比顯示方式可在「設定」切換。",
+                    stringResource(R.string.dashboard_footer),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,

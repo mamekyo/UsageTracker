@@ -1,5 +1,6 @@
 package com.mamekyo.usagetracker.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,15 +35,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mamekyo.usagetracker.R
 import com.mamekyo.usagetracker.data.Provider
 
-private enum class Tab(val label: String, val title: String, val icon: ImageVector) {
-    USAGE("用量", "AI 用量", Icons.Filled.Home),
-    ACCOUNTS("帳號", "帳號管理", Icons.Filled.AccountCircle),
-    ALERTS("通知", "用量提醒", Icons.Filled.Notifications),
-    SETTINGS("設定", "設定", Icons.Filled.Settings),
+private enum class Tab(@param:StringRes val label: Int, @param:StringRes val title: Int, val icon: ImageVector) {
+    USAGE(R.string.tab_usage, R.string.title_usage, Icons.Filled.Home),
+    ACCOUNTS(R.string.tab_accounts, R.string.title_accounts, Icons.Filled.AccountCircle),
+    ALERTS(R.string.tab_alerts, R.string.title_alerts, Icons.Filled.Notifications),
+    SETTINGS(R.string.tab_settings, R.string.title_settings, Icons.Filled.Settings),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,14 +66,14 @@ fun AppRoot(vm: MainViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(tab.title) },
+                title = { Text(stringResource(tab.title)) },
                 actions = {
                     if (tab == Tab.USAGE) {
                         IconButton(onClick = vm::refresh, enabled = !refreshing) {
                             if (refreshing) {
                                 CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
                             } else {
-                                Icon(Icons.Filled.Refresh, contentDescription = "重新整理")
+                                Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.action_refresh))
                             }
                         }
                     }
@@ -84,7 +87,7 @@ fun AppRoot(vm: MainViewModel) {
                         selected = tab == item,
                         onClick = { tab = item },
                         icon = { Icon(item.icon, contentDescription = null) },
-                        label = { Text(item.label) },
+                        label = { Text(stringResource(item.label)) },
                     )
                 }
             }
@@ -94,12 +97,12 @@ fun AppRoot(vm: MainViewModel) {
                 Tab.ACCOUNTS -> ExtendedFloatingActionButton(
                     onClick = { pickingProvider = true },
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    text = { Text("新增帳號") },
+                    text = { Text(stringResource(R.string.fab_add_account)) },
                 )
                 Tab.ALERTS -> ExtendedFloatingActionButton(
                     onClick = { editingRule = true },
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    text = { Text("新增提醒") },
+                    text = { Text(stringResource(R.string.fab_add_alert)) },
                 )
                 else -> Unit
             }
@@ -141,12 +144,12 @@ fun AppRoot(vm: MainViewModel) {
 private fun ProviderPickerDialog(onPick: (Provider) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("新增哪一家的帳號？") },
+        title = { Text(stringResource(R.string.provider_picker_title)) },
         text = {
             Column {
                 listOf(
-                    Triple(Provider.OPENAI, "OpenAI（ChatGPT）", "Plus / Pro 訂閱：5 小時與每週限制"),
-                    Triple(Provider.CLAUDE, "Claude", "Pro / Max 訂閱：5 小時、每週及 Fable 等模型限制"),
+                    Triple(Provider.OPENAI, stringResource(R.string.provider_openai_name), stringResource(R.string.provider_openai_desc)),
+                    Triple(Provider.CLAUDE, Provider.CLAUDE.displayName, stringResource(R.string.provider_claude_desc)),
                 ).forEach { (provider, title, description) ->
                     ListItem(
                         headlineContent = { Text(title) },
@@ -159,6 +162,6 @@ private fun ProviderPickerDialog(onPick: (Provider) -> Unit, onDismiss: () -> Un
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }

@@ -1,14 +1,11 @@
 package com.mamekyo.usagetracker.net
 
-/** Shared window keys/labels so windows from different accounts of a provider line up for merging. */
+/** Shared window keys so windows from different accounts of a provider line up for merging. */
 object Windows {
     const val FIVE_HOUR = "five_hour"
     const val WEEKLY = "seven_day"
     const val FIVE_HOUR_SECONDS = 5L * 3600
     const val WEEK_SECONDS = 7L * 24 * 3600
-
-    const val FIVE_HOUR_LABEL = "5 小時"
-    const val WEEKLY_LABEL = "每週"
 
     /** Maps a window length to its canonical key, tolerating small server-side deviations. */
     fun keyForSeconds(seconds: Long?): String = when {
@@ -18,14 +15,15 @@ object Windows {
         else -> "window_$seconds"
     }
 
-    fun labelForSeconds(seconds: Long?): String = when (keyForSeconds(seconds)) {
-        FIVE_HOUR -> FIVE_HOUR_LABEL
-        WEEKLY -> WEEKLY_LABEL
+    /** Language-neutral label stored with a window; the UI localizes known lengths itself. */
+    fun fallbackLabel(seconds: Long?): String = when (keyForSeconds(seconds)) {
+        FIVE_HOUR -> "5h"
+        WEEKLY -> "7d"
         else -> when {
-            seconds == null -> "用量"
-            seconds % 86_400 == 0L -> "${seconds / 86_400} 天"
-            seconds % 3600 == 0L -> "${seconds / 3600} 小時"
-            else -> "${seconds / 60} 分鐘"
+            seconds == null -> "usage"
+            seconds % 86_400 == 0L -> "${seconds / 86_400}d"
+            seconds % 3600 == 0L -> "${seconds / 3600}h"
+            else -> "${seconds / 60}m"
         }
     }
 

@@ -5,7 +5,6 @@ import kotlinx.serialization.json.JsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
-import java.io.IOException
 
 /**
  * Claude subscription (Pro/Max) access through the same OAuth client Claude Code uses.
@@ -68,10 +67,8 @@ object ClaudeApi {
 
     suspend fun exchangeCode(login: LoginRequest, input: String): Login {
         val (code, state) = parseAuthorizationInput(input)
-        if (code.isBlank()) throw IOException("請貼上授權碼")
-        if (state != null && state != login.state) {
-            throw IOException("授權碼不屬於這次登入，請重新按「開啟登入頁面」再試一次")
-        }
+        if (code.isBlank()) throw LoginException(LoginException.Reason.CODE_MISSING)
+        if (state != null && state != login.state) throw LoginException(LoginException.Reason.STATE_MISMATCH)
         val response = try {
             Http.callJson(
                 tokenRequest(
@@ -86,7 +83,7 @@ object ClaudeApi {
                 ),
             )
         } catch (e: HttpException) {
-            if (e.code == 400) throw IOException("授權碼無效或已過期，請重新開啟登入頁面取得新的授權碼（${e.serverMessage}）")
+            if (e.code == 400) throw LoginException(LoginException.Reason.CODE_INVALID, e.serverMessage)
             throw e
         }
         val account = response.obj("account")
@@ -137,17 +134,22 @@ object ClaudeApi {
     fun parseUsage(o: JsonObject): List<UsageWindow> {
         val byKey = LinkedHashMap<String, UsageWindow>()
 
-        fun legacy(key: String, label: String, seconds: Long, order: Int, source: JsonObject?) {
-            val used = source?.double("utilization") ?: return
-            byKey[key] = UsageWindow(key, label, used.coerceIn(0.0, 100.0), parseInstant(source["resets_at"]), seconds, order)
+        fun put(key: String, seconds: Long?, scope: String?, order: Int, used: Double, resetsAt: Long?, label: String? = null) {
+            val fallback = label ?: listOfNotNull(Windows.fallbackLabel(seconds), scope).joinToString(" · ")
+            byKey[key] = UsageWindow(key, fallback, used.coerceIn(0.0, 100.0), resetsAt, seconds, order, scope)
         }
 
-        legacy(Windows.FIVE_HOUR, Windows.FIVE_HOUR_LABEL, Windows.FIVE_HOUR_SECONDS, 0, o.obj("five_hour"))
-        legacy(Windows.WEEKLY, Windows.WEEKLY_LABEL, Windows.WEEK_SECONDS, 1, o.obj("seven_day"))
+        fun legacy(key: String, seconds: Long, scope: String?, order: Int, source: JsonObject?) {
+            val used = source?.double("utilization") ?: return
+            put(key, seconds, scope, order, used, parseInstant(source["resets_at"]))
+        }
+
+        legacy(Windows.FIVE_HOUR, Windows.FIVE_HOUR_SECONDS, null, 0, o.obj("five_hour"))
+        legacy(Windows.WEEKLY, Windows.WEEK_SECONDS, null, 1, o.obj("seven_day"))
         for ((name, value) in o) {
             if (!name.startsWith("seven_day_") || value !is JsonObject) continue
             val model = modelName(name.removePrefix("seven_day_"))
-            legacy(scopedKey(model), scopedLabel(model), Windows.WEEK_SECONDS, 2, value)
+            legacy(scopedKey(model), Windows.WEEK_SECONDS, model, 2, value)
         }
 
         o.arr("limits")?.forEach { element ->
@@ -155,46 +157,42 @@ object ClaudeApi {
             val percent = entry.double("percent") ?: return@forEach
             val kind = entry.str("kind")
             val group = entry.str("group")
-            val scope = entry.obj("scope")
-            val model = scope?.obj("model")?.let { it.str("display_name") ?: it.str("id") }
-            val surface = scope?.str("surface")
+            val scopeObject = entry.obj("scope")
+            val model = scopeObject?.obj("model")?.let { it.str("display_name") ?: it.str("id") }
+            val surface = scopeObject?.str("surface")?.takeIf { it.isNotBlank() }?.let(Windows::humanize)
 
             var key: String
-            var label: String
+            var scope: String?
+            var label: String? = null
             val seconds: Long?
             val order: Int
             when {
                 kind == "session" || (kind == null && group == "session" && model == null) -> {
-                    key = Windows.FIVE_HOUR; label = Windows.FIVE_HOUR_LABEL; seconds = Windows.FIVE_HOUR_SECONDS; order = 0
+                    key = Windows.FIVE_HOUR; scope = null; seconds = Windows.FIVE_HOUR_SECONDS; order = 0
                 }
                 kind == "weekly_all" || (kind == null && group == "weekly" && model == null) -> {
-                    key = Windows.WEEKLY; label = Windows.WEEKLY_LABEL; seconds = Windows.WEEK_SECONDS; order = 1
+                    key = Windows.WEEKLY; scope = null; seconds = Windows.WEEK_SECONDS; order = 1
                 }
                 kind == "weekly_scoped" || (group == "weekly" && model != null) -> {
-                    val name = model ?: "特定模型"
-                    key = scopedKey(name); label = scopedLabel(name); seconds = Windows.WEEK_SECONDS; order = 2
+                    scope = model ?: Windows.humanize(kind ?: "scoped")
+                    key = scopedKey(scope); seconds = Windows.WEEK_SECONDS; order = 2
                 }
                 else -> {
+                    // Unknown kind: its length is not certain, so keep the API's own wording.
                     val base = kind ?: group ?: "limit"
                     key = listOfNotNull(base, model?.lowercase()).joinToString(":")
                     label = listOfNotNull(Windows.humanize(base), model).joinToString(" · ")
-                    seconds = when (group) {
-                        "session" -> Windows.FIVE_HOUR_SECONDS
-                        "weekly" -> Windows.WEEK_SECONDS
-                        else -> null
-                    }
-                    order = 3
+                    scope = null; seconds = null; order = 3
                 }
             }
-            if (!surface.isNullOrBlank()) {
+            if (surface != null) {
                 key += "@$surface"
-                label += " · ${Windows.humanize(surface)}"
+                if (label != null) label += " · $surface" else scope = listOfNotNull(scope, surface).joinToString(" · ")
             }
-            val resetsAt = parseInstant(entry["resets_at"]) ?: byKey[key]?.resetsAt
-            byKey[key] = UsageWindow(key, label, percent.coerceIn(0.0, 100.0), resetsAt, seconds, order)
+            put(key, seconds, scope, order, percent, parseInstant(entry["resets_at"]) ?: byKey[key]?.resetsAt, label)
         }
 
-        return byKey.values.sortedWith(compareBy<UsageWindow> { it.order }.thenBy { it.label })
+        return byKey.values.sortedWith(compareBy<UsageWindow> { it.order }.thenBy { it.key })
     }
 
     private fun modelName(token: String): String = when (token.lowercase()) {
@@ -207,8 +205,6 @@ object ClaudeApi {
     }
 
     private fun scopedKey(model: String) = "${Windows.WEEKLY}:${model.lowercase()}"
-
-    private fun scopedLabel(model: String) = "每週 · $model"
 
     private fun tokenRequest(body: okhttp3.RequestBody) = Request.Builder()
         .url(TOKEN_URL)
@@ -228,7 +224,7 @@ object ClaudeApi {
         .build()
 
     private fun tokenSet(o: JsonObject): TokenSet {
-        val access = o.str("access_token") ?: throw IOException("登入回應缺少 access_token")
+        val access = o.str("access_token") ?: throw LoginException(LoginException.Reason.BAD_RESPONSE, "access_token")
         val expiresIn = o.long("expires_in") ?: DEFAULT_EXPIRES_IN_SECONDS
         return TokenSet(
             accessToken = access,

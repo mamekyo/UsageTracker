@@ -2,18 +2,22 @@ package com.mamekyo.usagetracker.domain
 
 import android.content.Context
 import android.util.Log
+import com.mamekyo.usagetracker.UsageTrackerApp
 import com.mamekyo.usagetracker.data.Account
 import com.mamekyo.usagetracker.data.AccountUsage
 import com.mamekyo.usagetracker.data.Credentials
 import com.mamekyo.usagetracker.data.Provider
 import com.mamekyo.usagetracker.data.Store
 import com.mamekyo.usagetracker.data.UsageWindow
+import com.mamekyo.usagetracker.i18n.Locales
+import com.mamekyo.usagetracker.i18n.Texts
 import com.mamekyo.usagetracker.net.ClaudeApi
 import com.mamekyo.usagetracker.net.HttpException
 import com.mamekyo.usagetracker.net.OpenAiApi
 import com.mamekyo.usagetracker.widget.UsageWidget
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,10 +25,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.IOException
-import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
 
-class ReauthRequiredException(message: String = "登入已失效，請重新登入") : IOException(message)
+class ReauthRequiredException : IOException("reauthentication required")
 
 /** Fetches usage for every account, keeping tokens fresh, then republishes widgets and alerts. */
 class UsageRepository private constructor(private val context: Context) {
@@ -34,6 +37,21 @@ class UsageRepository private constructor(private val context: Context) {
     private val _refreshing = MutableStateFlow(false)
 
     val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
+
+    /**
+     * Shows the refreshing state right away, before the queued background refresh starts. If that refresh
+     * never starts (e.g. the system defers it), the state is dropped after a timeout so widgets don't spin forever.
+     */
+    fun markRefreshRequested() {
+        _refreshing.value = true
+        UsageTrackerApp.scope.launch {
+            delay(REQUEST_TIMEOUT_MS)
+            if (_refreshing.value && !refreshMutex.isLocked) {
+                _refreshing.value = false
+                runCatching { UsageWidget.updateAll(context) }
+            }
+        }
+    }
 
     /** Refreshes all accounts. Concurrent callers wait for the in-flight refresh instead of starting another. */
     suspend fun refreshAll() {
@@ -46,6 +64,8 @@ class UsageRepository private constructor(private val context: Context) {
             val accounts = store.state.value.accounts
             coroutineScope { accounts.forEach { launch { refreshAccount(it) } } }
             store.update { it.copy(lastRefreshAt = System.currentTimeMillis()) }
+            // Clear the flag before republishing so widgets render the finished state.
+            _refreshing.value = false
             publish()
         } finally {
             _refreshing.value = false
@@ -83,7 +103,7 @@ class UsageRepository private constructor(private val context: Context) {
         } catch (e: Exception) {
             Log.w(TAG, "Refresh failed for ${account.provider}", e)
             val reauth = e is ReauthRequiredException
-            val message = describe(e)
+            val message = Texts.error(Locales.wrap(context), e)
             store.update { state ->
                 if (state.accounts.none { it.id == account.id }) return@update state
                 val previous = state.usage[account.id] ?: AccountUsage()
@@ -171,19 +191,7 @@ class UsageRepository private constructor(private val context: Context) {
     companion object {
         private const val TAG = "UsageRepository"
         private const val REFRESH_SKEW_MS = 5 * 60 * 1000L
-
-        fun describe(e: Throwable): String = when (e) {
-            is ReauthRequiredException -> e.message ?: "登入已失效，請重新登入"
-            is HttpException -> when (e.code) {
-                429 -> "請求過於頻繁（HTTP 429），稍後會自動重試"
-                in 500..599 -> "伺服器暫時無法使用（HTTP ${e.code}）"
-                else -> "HTTP ${e.code}：${e.serverMessage ?: "未知錯誤"}"
-            }
-            is UnknownHostException, is java.net.ConnectException -> "無法連線，請檢查網路"
-            is java.net.SocketTimeoutException -> "連線逾時，稍後會自動重試"
-            is IOException -> e.message?.takeIf { it.isNotBlank() } ?: "網路錯誤"
-            else -> e.message ?: e.javaClass.simpleName
-        }
+        private const val REQUEST_TIMEOUT_MS = 2 * 60 * 1000L
 
         @Volatile
         private var instance: UsageRepository? = null

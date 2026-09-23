@@ -1,5 +1,6 @@
 package com.mamekyo.usagetracker.ui
 
+import android.app.Activity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -13,17 +14,34 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mamekyo.usagetracker.BuildConfig
+import com.mamekyo.usagetracker.R
+import com.mamekyo.usagetracker.UsageTrackerApp
 import com.mamekyo.usagetracker.data.AppState
 import com.mamekyo.usagetracker.data.DisplayMode
 import com.mamekyo.usagetracker.domain.Format
+import com.mamekyo.usagetracker.i18n.AppLanguage
+import com.mamekyo.usagetracker.i18n.Locales
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(state: AppState, vm: MainViewModel, refreshing: Boolean) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val settings = state.settings
     val now = System.currentTimeMillis()
+    var language by remember { mutableStateOf(Locales.current(context)) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -31,43 +49,64 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, refreshing: Boolean) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SettingsCard("百分比顯示") {
-            RadioRow(settings.displayMode == DisplayMode.REMAINING, "剩餘的 %", "例：剩餘 70%，進度條顯示剩下的額度") {
-                vm.setDisplayMode(DisplayMode.REMAINING)
-            }
-            RadioRow(settings.displayMode == DisplayMode.USED, "已使用的 %", "例：已使用 30%，進度條顯示用掉的額度") {
-                vm.setDisplayMode(DisplayMode.USED)
+        SettingsCard(stringResource(R.string.settings_display)) {
+            RadioRow(
+                settings.displayMode == DisplayMode.REMAINING,
+                stringResource(R.string.display_remaining),
+                stringResource(R.string.display_remaining_desc),
+            ) { vm.setDisplayMode(DisplayMode.REMAINING) }
+            RadioRow(
+                settings.displayMode == DisplayMode.USED,
+                stringResource(R.string.display_used),
+                stringResource(R.string.display_used_desc),
+            ) { vm.setDisplayMode(DisplayMode.USED) }
+        }
+
+        SettingsCard(stringResource(R.string.settings_language)) {
+            AppLanguage.entries.forEach { option ->
+                RadioRow(language == option, stringResource(option.labelRes)) {
+                    if (option == language) return@RadioRow
+                    language = option
+                    scope.launch {
+                        // Android 13+ recreates the activity itself; older versions need it done here.
+                        if (Locales.set(context, option)) {
+                            UsageTrackerApp.onLanguageChanged(context)
+                            (context as? Activity)?.recreate()
+                        }
+                    }
+                }
             }
         }
 
-        SettingsCard("自動更新") {
+        SettingsCard(stringResource(R.string.settings_refresh)) {
             listOf(15, 30, 60, 120).forEach { minutes ->
-                val label = if (minutes < 60) "每 $minutes 分鐘" else "每 ${minutes / 60} 小時"
+                val label = if (minutes < 60) {
+                    pluralStringResource(R.plurals.refresh_every_minutes, minutes, minutes)
+                } else {
+                    pluralStringResource(R.plurals.refresh_every_hours, minutes / 60, minutes / 60)
+                }
                 RadioRow(settings.refreshMinutes == minutes, label) { vm.setRefreshMinutes(minutes) }
             }
             Text(
-                "Android 限制背景更新最短 15 分鐘，省電模式下可能延後。上次更新：" +
-                    if (state.lastRefreshAt > 0) Format.clock(state.lastRefreshAt, now) else "尚未更新",
+                stringResource(
+                    R.string.refresh_note,
+                    if (state.lastRefreshAt > 0) Format.clock(state.lastRefreshAt, now) else stringResource(R.string.not_updated),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(onClick = vm::refresh, enabled = !refreshing) { Text(if (refreshing) "更新中…" else "立即更新") }
+            Button(onClick = vm::refresh, enabled = !refreshing) {
+                Text(stringResource(if (refreshing) R.string.refreshing else R.string.refresh_now))
+            }
         }
 
-        SettingsCard("主畫面小工具") {
-            Text(
-                "在主畫面長按空白處 → 小工具 → UsageTracker，拖曳到主畫面後選擇要顯示的內容：" +
-                    "全部、單一供應商（多帳號合併）或單一帳號，以及樣式：長條或圓餅（多個限制並排一行）。" +
-                    "之後長按小工具即可重新設定。",
-                style = MaterialTheme.typography.bodyMedium,
-            )
+        SettingsCard(stringResource(R.string.settings_widget)) {
+            Text(stringResource(R.string.widget_help), style = MaterialTheme.typography.bodyMedium)
         }
 
-        SettingsCard("關於") {
+        SettingsCard(stringResource(R.string.settings_about)) {
             Text(
-                "所有帳號與登入權杖只儲存在這支手機上，權杖以 Android Keystore 加密，不會上傳到其他伺服器。\n\n" +
-                    "用量資料來自 OpenAI Codex 與 Claude Code 使用的非公開介面，官方調整時可能暫時失效。\n\n" +
-                    "版本 ${BuildConfig.VERSION_NAME}",
+                stringResource(R.string.about_text, BuildConfig.VERSION_NAME),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

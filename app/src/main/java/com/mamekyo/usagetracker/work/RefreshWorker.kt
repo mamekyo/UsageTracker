@@ -35,11 +35,13 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.UPDATE, request)
         }
 
+        /**
+         * User-requested refresh. No network constraint: it must run promptly so the refreshing state shown in
+         * widgets always ends; offline it finishes quickly with a connection error instead.
+         */
         fun refreshNow(context: Context) {
-            val request = OneTimeWorkRequestBuilder<RefreshWorker>()
-                .setConstraints(networkConstraint)
-                .build()
-            WorkManager.getInstance(context).enqueueUniqueWork(ONE_SHOT, ExistingWorkPolicy.KEEP, request)
+            WorkManager.getInstance(context)
+                .enqueueUniqueWork(ONE_SHOT, ExistingWorkPolicy.APPEND_OR_REPLACE, OneTimeWorkRequestBuilder<RefreshWorker>().build())
         }
     }
 }

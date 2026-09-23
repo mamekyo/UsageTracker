@@ -111,70 +111,73 @@ fun AddAccountScreen(provider: Provider, onClose: () -> Unit, vm: LoginViewModel
 
 @Composable
 private fun ClaudeSteps(vm: LoginViewModel, status: LoginViewModel.Status, ephemeral: Boolean) {
-    val context = LocalContext.current
-    var code by rememberSaveable { mutableStateOf("") }
-    val busy = status is LoginViewModel.Status.Working
-
-    StepCard("1", "開啟 Claude 登入頁面", "登入 Claude 帳號後，在授權頁按「Authorize」。") {
-        Button(onClick = { Browser.open(context, vm.startClaude(), ephemeral) }, enabled = !busy) {
-            Text("開啟登入頁面")
-        }
-    }
-    StepCard("2", "貼上授權碼", "授權後頁面會顯示一段授權碼，按下複製並回到這裡貼上。") {
-        OutlinedTextField(
-            value = code,
-            onValueChange = { code = it },
-            label = { Text("授權碼") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { Clipboard.paste(context)?.let { code = it.trim() } }) { Text("從剪貼簿貼上") }
-            Spacer(Modifier.weight(1f))
-            Button(onClick = { vm.submitClaudeCode(code) }, enabled = code.isNotBlank() && !busy) { Text("完成登入") }
-        }
-    }
+    BrowserLoginCard(
+        step = "1",
+        description = "登入 Claude 帳號並按「Authorize」，完成後帳號會自動加入。",
+        fallbackHint = "若授權後沒有自動加入（例如瀏覽器顯示無法連線），請複製網址列的完整網址，或頁面顯示的授權碼，貼到下方：",
+        status = status,
+        ephemeral = ephemeral,
+        onStart = vm::startClaude,
+        onSubmit = vm::submitClaudeCode,
+    )
 }
 
 @Composable
 private fun OpenAiSteps(vm: LoginViewModel, status: LoginViewModel.Status, ephemeral: Boolean) {
-    val context = LocalContext.current
-    var callbackUrl by rememberSaveable { mutableStateOf("") }
-    val busy = status is LoginViewModel.Status.Working
-
-    StepCard("A", "瀏覽器登入（建議）", "在瀏覽器登入 ChatGPT 帳號，完成後帳號會自動加入。") {
-        Button(
-            onClick = { vm.startOpenAiBrowser()?.let { Browser.open(context, it, ephemeral) } },
-            enabled = !busy,
-        ) { Text("開啟登入頁面") }
-        if (status is LoginViewModel.Status.Waiting) {
-            Text(
-                "若登入後瀏覽器顯示「無法連上這個網站」，請複製網址列中以 http://localhost:1455 開頭的完整網址，貼到下方：",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OutlinedTextField(
-                value = callbackUrl,
-                onValueChange = { callbackUrl = it },
-                label = { Text("回呼網址") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { Clipboard.paste(context)?.let { callbackUrl = it.trim() } }) { Text("從剪貼簿貼上") }
-                Spacer(Modifier.weight(1f))
-                OutlinedButton(onClick = { vm.submitOpenAiCallback(callbackUrl) }, enabled = callbackUrl.isNotBlank()) {
-                    Text("送出網址")
-                }
-            }
-        }
-    }
+    BrowserLoginCard(
+        step = "A",
+        description = "在瀏覽器登入 ChatGPT 帳號，完成後帳號會自動加入。",
+        fallbackHint = "若登入後瀏覽器顯示「無法連上這個網站」，請複製網址列中以 http://localhost:1455 開頭的完整網址，貼到下方：",
+        status = status,
+        ephemeral = ephemeral,
+        onStart = vm::startOpenAiBrowser,
+        onSubmit = vm::submitOpenAiCallback,
+    )
     StepCard(
         "B",
         "裝置代碼登入",
         "瀏覽器登入不順時可改用此方式：取得代碼後到驗證頁面輸入。若出現錯誤，可能需先在 ChatGPT 網頁版「設定 → 安全性」啟用 Codex 裝置代碼登入。",
     ) {
-        OutlinedButton(onClick = vm::startOpenAiDevice, enabled = !busy) { Text("取得裝置代碼") }
+        OutlinedButton(onClick = vm::startOpenAiDevice, enabled = status !is LoginViewModel.Status.Working) {
+            Text("取得裝置代碼")
+        }
+    }
+}
+
+/** Opens the provider's login page; the loopback redirect finishes the login, pasting is the fallback. */
+@Composable
+private fun BrowserLoginCard(
+    step: String,
+    description: String,
+    fallbackHint: String,
+    status: LoginViewModel.Status,
+    ephemeral: Boolean,
+    onStart: () -> String?,
+    onSubmit: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    var pasted by rememberSaveable { mutableStateOf("") }
+    val busy = status is LoginViewModel.Status.Working
+
+    StepCard(step, "瀏覽器登入", description) {
+        Button(onClick = { onStart()?.let { Browser.open(context, it, ephemeral) } }, enabled = !busy) {
+            Text("開啟登入頁面")
+        }
+        if (status is LoginViewModel.Status.Waiting) {
+            Text(fallbackHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedTextField(
+                value = pasted,
+                onValueChange = { pasted = it },
+                label = { Text("網址或授權碼") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { Clipboard.paste(context)?.let { pasted = it.trim() } }) { Text("從剪貼簿貼上") }
+                Spacer(Modifier.weight(1f))
+                OutlinedButton(onClick = { onSubmit(pasted) }, enabled = pasted.isNotBlank()) { Text("送出") }
+            }
+        }
     }
 }
 

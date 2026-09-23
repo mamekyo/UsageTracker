@@ -89,6 +89,15 @@ sealed interface Source {
 }
 
 @Serializable
+enum class WidgetStyle {
+    /** One row per window: label, reset time, percentage and a progress bar. */
+    @SerialName("bars") BARS,
+
+    /** Ring gauges side by side, one row per provider. */
+    @SerialName("rings") RINGS,
+}
+
+@Serializable
 data class AlertRule(
     val id: String,
     val source: Source,
@@ -109,5 +118,7 @@ data class AppState(
     val firedAlerts: Set<String> = emptySet(),
     /** appWidgetId -> source shown by that widget. */
     val widgets: Map<Int, Source> = emptyMap(),
+    /** appWidgetId -> visual style; widgets without an entry use bars. Kept separate so older state files still load. */
+    val widgetStyles: Map<Int, WidgetStyle> = emptyMap(),
     val lastRefreshAt: Long = 0,
 )

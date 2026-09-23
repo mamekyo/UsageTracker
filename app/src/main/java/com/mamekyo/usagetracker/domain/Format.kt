@@ -30,21 +30,23 @@ object Format {
         }
     }
 
-    fun resetText(resetsAt: Long?, now: Long): String = when {
-        resetsAt == null -> "尚未開始計算"
+    /** [short] uses compact units ("3天19時後重置") for tight widget layouts. */
+    fun resetText(resetsAt: Long?, now: Long, short: Boolean = false): String = when {
+        resetsAt == null -> if (short) "未開始" else "尚未開始計算"
         resetsAt <= now -> "即將重置"
-        else -> "${duration(resetsAt - now)}後重置"
+        else -> "${duration(resetsAt - now, short)}後重置"
     }
 
-    fun duration(millis: Long): String {
+    fun duration(millis: Long, short: Boolean = false): String {
         val totalMinutes = (millis + 59_999) / 60_000
         val days = totalMinutes / (24 * 60)
         val hours = (totalMinutes % (24 * 60)) / 60
         val minutes = totalMinutes % 60
+        val hourUnit = if (short) "時" else "小時"
         return when {
-            days > 0 -> if (hours > 0) "${days}天${hours}小時" else "${days}天"
-            hours > 0 -> if (minutes > 0) "${hours}小時${minutes}分" else "${hours}小時"
-            else -> "${minutes.coerceAtLeast(1)}分鐘"
+            days > 0 -> if (hours > 0) "${days}天$hours$hourUnit" else "${days}天"
+            hours > 0 -> if (minutes > 0) "$hours$hourUnit${minutes}分" else "$hours$hourUnit"
+            else -> "${minutes.coerceAtLeast(1)}${if (short) "分" else "分鐘"}"
         }
     }
 

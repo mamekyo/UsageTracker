@@ -15,21 +15,24 @@ import java.net.Socket
 /**
  * Minimal loopback HTTP listener that receives the OAuth redirect
  * (`http://localhost:<port><path>?code=...&state=...`) from the browser on this device.
+ * Pass port 0 to let the system pick a free port.
  */
 class LoopbackServer(
-    private val port: Int,
+    private val requestedPort: Int,
     private val path: String,
-    private val expectedState: String,
 ) : Closeable {
     private val sockets = mutableListOf<ServerSocket>()
 
-    /** Binds IPv4 loopback (required) and IPv6 loopback (best effort). */
-    fun start() {
-        sockets += bind("127.0.0.1") ?: throw IOException("無法使用本機連接埠 $port，請確認沒有其他程式占用")
-        bind("::1")?.let { sockets += it }
+    /** Binds IPv4 loopback (required) and IPv6 loopback on the same port (best effort); returns the port. */
+    fun start(): Int {
+        val primary = bind("127.0.0.1", requestedPort)
+            ?: throw IOException("無法使用本機連接埠 $requestedPort，請確認沒有其他程式占用")
+        sockets += primary
+        bind("::1", primary.localPort)?.let { sockets += it }
+        return primary.localPort
     }
 
-    private fun bind(host: String): ServerSocket? = try {
+    private fun bind(host: String, port: Int): ServerSocket? = try {
         ServerSocket().apply {
             reuseAddress = true
             bind(InetSocketAddress(InetAddress.getByName(host), port))
@@ -38,10 +41,10 @@ class LoopbackServer(
         null
     }
 
-    /** Suspends until a matching redirect arrives; returns the authorization code. */
-    suspend fun awaitCode(): String = coroutineScope {
+    /** Suspends until a redirect carrying [expectedState] arrives; returns the authorization code. */
+    suspend fun awaitCode(expectedState: String): String = coroutineScope {
         val result = CompletableDeferred<String>()
-        sockets.forEach { server -> launch(Dispatchers.IO) { acceptLoop(server, result) } }
+        sockets.forEach { server -> launch(Dispatchers.IO) { acceptLoop(server, expectedState, result) } }
         try {
             result.await()
         } finally {
@@ -49,18 +52,18 @@ class LoopbackServer(
         }
     }
 
-    private fun acceptLoop(server: ServerSocket, result: CompletableDeferred<String>) {
+    private fun acceptLoop(server: ServerSocket, expectedState: String, result: CompletableDeferred<String>) {
         while (!result.isCompleted && !server.isClosed) {
             val socket = try {
                 server.accept()
             } catch (e: IOException) {
                 return
             }
-            runCatching { socket.use { handle(it, result) } }
+            runCatching { socket.use { handle(it, expectedState, result) } }
         }
     }
 
-    private fun handle(socket: Socket, result: CompletableDeferred<String>) {
+    private fun handle(socket: Socket, expectedState: String, result: CompletableDeferred<String>) {
         socket.soTimeout = 10_000
         val reader = socket.getInputStream().bufferedReader()
         val requestLine = reader.readLine() ?: return

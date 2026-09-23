@@ -56,39 +56,61 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
         _status.value = Status.Idle
     }
 
+    /**
+     * Starts a loopback listener on a free port so Claude's redirect adds the account automatically.
+     * If no port can be bound, falls back to Claude's copy/paste code page.
+     */
     fun startClaude(): String {
         reset()
-        val login = ClaudeApi.newLogin()
+        val listener = LoopbackServer(0, ClaudeApi.CALLBACK_PATH)
+        val port = try {
+            listener.start()
+        } catch (e: IOException) {
+            null
+        }
+        val login = ClaudeApi.newLogin(port)
         claudeLogin = login
         _authUrl.value = login.url
-        _status.value = Status.Waiting("在瀏覽器登入並按「Authorize」後，複製頁面顯示的授權碼，再回來貼到下方。")
+        if (port == null) {
+            _status.value = Status.Waiting("在瀏覽器登入並按「Authorize」後，複製頁面顯示的授權碼，再回來貼到下方。")
+        } else {
+            server = listener
+            launchFlow(Status.Waiting("請在瀏覽器登入並按「Authorize」，完成後會自動加入帳號。")) {
+                finishClaudeLogin(login, listener.awaitCode(login.state))
+            }
+        }
         return login.url
     }
 
+    /** Fallback: the user pastes the callback URL from the address bar, or a code shown by Claude. */
     fun submitClaudeCode(input: String) {
         val login = claudeLogin ?: run {
             _status.value = Status.Failed("請先按「開啟登入頁面」")
             return
         }
-        launchFlow(Status.Working("正在驗證授權碼…")) {
-            val result = ClaudeApi.exchangeCode(login, input)
-            val profile = runCatching { ClaudeApi.fetchProfile(result.tokens.accessToken) }.getOrNull()
-            val email = profile?.email ?: result.email
-            saveAccount(
-                provider = Provider.CLAUDE,
-                email = email,
-                plan = profile?.plan,
-                externalId = profile?.accountUuid ?: result.accountUuid ?: email,
-                credentials = Credentials(result.tokens.accessToken, result.tokens.refreshToken, result.tokens.expiresAt),
-            )
-        }
+        server?.close()
+        launchFlow(Status.Working("正在驗證授權碼…")) { finishClaudeLogin(login, input) }
+    }
+
+    private suspend fun finishClaudeLogin(login: ClaudeApi.LoginRequest, codeOrUrl: String): Account {
+        _status.value = Status.Working("正在完成登入…")
+        val result = ClaudeApi.exchangeCode(login, codeOrUrl)
+        val profile = runCatching { ClaudeApi.fetchProfile(result.tokens.accessToken) }.getOrNull()
+        val email = profile?.email ?: result.email
+        return saveAccount(
+            provider = Provider.CLAUDE,
+            email = email,
+            plan = profile?.plan,
+            externalId = profile?.accountUuid ?: result.accountUuid ?: email,
+            credentials = Credentials(result.tokens.accessToken, result.tokens.refreshToken, result.tokens.expiresAt),
+        )
     }
 
     /** Starts the loopback listener and returns the URL to open, or null when the port is unavailable. */
     fun startOpenAiBrowser(): String? {
         reset()
         val login = OpenAiApi.newBrowserLogin()
-        val listener = LoopbackServer(OpenAiApi.CALLBACK_PORT, OpenAiApi.CALLBACK_PATH, login.state)
+        val listener = LoopbackServer(OpenAiApi.CALLBACK_PORT, OpenAiApi.CALLBACK_PATH)
         try {
             listener.start()
         } catch (e: IOException) {
@@ -99,7 +121,7 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
         openAiLogin = login
         _authUrl.value = login.url
         launchFlow(Status.Waiting("請在瀏覽器完成登入，完成後會自動加入帳號。")) {
-            val code = listener.awaitCode()
+            val code = listener.awaitCode(login.state)
             _status.value = Status.Working("正在完成登入…")
             finishOpenAiLogin(OpenAiApi.exchangeBrowserCode(code, login))
         }

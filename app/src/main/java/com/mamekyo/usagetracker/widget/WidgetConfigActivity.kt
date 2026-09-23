@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -31,6 +32,7 @@ import androidx.lifecycle.lifecycleScope
 import com.mamekyo.usagetracker.data.Provider
 import com.mamekyo.usagetracker.data.Source
 import com.mamekyo.usagetracker.data.Store
+import com.mamekyo.usagetracker.data.WidgetStyle
 import com.mamekyo.usagetracker.domain.Aggregator
 import com.mamekyo.usagetracker.ui.RadioRow
 import com.mamekyo.usagetracker.ui.theme.UsageTrackerTheme
@@ -54,6 +56,7 @@ class WidgetConfigActivity : ComponentActivity() {
             UsageTrackerTheme {
                 val state by store.state.collectAsStateWithLifecycle()
                 var selectedKey by rememberSaveable { mutableStateOf(key(state.widgets[appWidgetId] ?: Source.All)) }
+                var style by rememberSaveable { mutableStateOf(state.widgetStyles[appWidgetId] ?: WidgetStyle.BARS) }
                 val options = buildList {
                     add(Source.All)
                     Provider.entries.forEach { provider ->
@@ -63,7 +66,7 @@ class WidgetConfigActivity : ComponentActivity() {
                 }
                 val selected = options.firstOrNull { key(it) == selectedKey } ?: Source.All
 
-                Scaffold(topBar = { TopAppBar(title = { Text("小工具要顯示什麼？") }) }) { padding ->
+                Scaffold(topBar = { TopAppBar(title = { Text("設定小工具") }) }) { padding ->
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -72,6 +75,7 @@ class WidgetConfigActivity : ComponentActivity() {
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        SectionTitle("顯示內容")
                         options.forEach { option ->
                             RadioRow(
                                 selected = option == selected,
@@ -91,7 +95,14 @@ class WidgetConfigActivity : ComponentActivity() {
                                 modifier = Modifier.padding(vertical = 8.dp),
                             )
                         }
-                        Button(onClick = { save(appWidgetId, selected) }, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
+                        SectionTitle("顯示樣式")
+                        RadioRow(style == WidgetStyle.BARS, "長條", "每個限制一列：進度條、% 數與重置時間") {
+                            style = WidgetStyle.BARS
+                        }
+                        RadioRow(style == WidgetStyle.RINGS, "圓餅", "多個限制並排成一行，適合較小的小工具") {
+                            style = WidgetStyle.RINGS
+                        }
+                        Button(onClick = { save(appWidgetId, selected, style) }, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
                             Text("完成")
                         }
                     }
@@ -106,9 +117,16 @@ class WidgetConfigActivity : ComponentActivity() {
         is Source.Single -> "account:${source.accountId}"
     }
 
-    private fun save(appWidgetId: Int, source: Source) {
+    @Composable
+    private fun SectionTitle(text: String) {
+        Text(text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+    }
+
+    private fun save(appWidgetId: Int, source: Source, style: WidgetStyle) {
         lifecycleScope.launch {
-            Store.get(this@WidgetConfigActivity).update { it.copy(widgets = it.widgets + (appWidgetId to source)) }
+            Store.get(this@WidgetConfigActivity).update {
+                it.copy(widgets = it.widgets + (appWidgetId to source), widgetStyles = it.widgetStyles + (appWidgetId to style))
+            }
             runCatching {
                 val glanceId = GlanceAppWidgetManager(this@WidgetConfigActivity).getGlanceIdBy(appWidgetId)
                 UsageWidget().update(this@WidgetConfigActivity, glanceId)

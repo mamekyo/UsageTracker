@@ -57,7 +57,8 @@ fun SettingsScreen(state: AppState, vm: MainViewModel, refreshing: Boolean) {
         SettingsCard("主畫面小工具") {
             Text(
                 "在主畫面長按空白處 → 小工具 → UsageTracker，拖曳到主畫面後選擇要顯示的內容：" +
-                    "全部、單一供應商（多帳號合併）或單一帳號。之後長按小工具即可重新設定。",
+                    "全部、單一供應商（多帳號合併）或單一帳號，以及樣式：長條或圓餅（多個限制並排一行）。" +
+                    "之後長按小工具即可重新設定。",
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

@@ -13,9 +13,10 @@ import java.io.IOException
  */
 object ClaudeApi {
     const val CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
-    // Values match Claude Code 2.1.280's manual (copy/paste code) login flow.
+    // Values match Claude Code 2.1.280: loopback redirect on any port, or the copy/paste code page.
     private const val AUTHORIZE_URL = "https://claude.com/cai/oauth/authorize"
-    private const val REDIRECT_URI = "https://platform.claude.com/oauth/code/callback"
+    const val CALLBACK_PATH = "/callback"
+    private const val MANUAL_REDIRECT_URI = "https://platform.claude.com/oauth/code/callback"
     private const val TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
     private const val USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
     private const val PROFILE_URL = "https://api.anthropic.com/api/oauth/profile"
@@ -27,27 +28,32 @@ object ClaudeApi {
     private const val USER_AGENT = "claude-cli/2.1.280 (external, cli)"
     private const val DEFAULT_EXPIRES_IN_SECONDS = 8L * 3600
 
-    class LoginRequest(val url: String, val verifier: String, val state: String)
+    class LoginRequest(val url: String, val verifier: String, val state: String, val redirectUri: String)
 
     data class Profile(val email: String?, val plan: String?, val accountUuid: String?)
 
     data class Login(val tokens: TokenSet, val email: String?, val accountUuid: String?)
 
-    fun newLogin(): LoginRequest {
+    /**
+     * With [loopbackPort] the browser is redirected to `http://localhost:<port>/callback` so the app receives
+     * the code automatically; without it Claude shows the code for the user to paste.
+     */
+    fun newLogin(loopbackPort: Int?): LoginRequest {
         val verifier = Pkce.verifier()
         val state = Pkce.randomToken(32)
+        val redirectUri = loopbackPort?.let { "http://localhost:$it$CALLBACK_PATH" } ?: MANUAL_REDIRECT_URI
         val url = AUTHORIZE_URL.toHttpUrl().newBuilder()
             .addQueryParameter("code", "true")
             .addQueryParameter("client_id", CLIENT_ID)
             .addQueryParameter("response_type", "code")
-            .addQueryParameter("redirect_uri", REDIRECT_URI)
+            .addQueryParameter("redirect_uri", redirectUri)
             .addQueryParameter("scope", SCOPES)
             .addQueryParameter("code_challenge", Pkce.challenge(verifier))
             .addQueryParameter("code_challenge_method", "S256")
             .addQueryParameter("state", state)
             .build()
             .toString()
-        return LoginRequest(url, verifier, state)
+        return LoginRequest(url, verifier, state, redirectUri)
     }
 
     /** Accepts the "code#state" string shown by the callback page, a bare code, or the full callback URL. */
@@ -74,7 +80,7 @@ object ClaudeApi {
                         "code" to code,
                         "state" to login.state,
                         "client_id" to CLIENT_ID,
-                        "redirect_uri" to REDIRECT_URI,
+                        "redirect_uri" to login.redirectUri,
                         "code_verifier" to login.verifier,
                     ),
                 ),

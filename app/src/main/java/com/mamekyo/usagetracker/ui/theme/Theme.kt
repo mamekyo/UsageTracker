@@ -32,6 +32,6 @@ fun Provider.brandColor(): Color = when (this) {
 
 fun Level.color(): Color = when (this) {
     Level.GOOD -> Color(0xFF2E9D4F)
-    Level.WARN -> Color(0xFFE0A100)
+    Level.WARN -> Color(0xFFD17D00)
     Level.CRITICAL -> Color(0xFFD93025)
 }

@@ -113,6 +113,7 @@ class AggregationTest {
         assertEquals("2小時15分", Format.duration(2 * hour + 15 * 60_000))
         assertEquals("3天4小時", Format.duration(76 * hour))
         assertEquals("1分鐘", Format.duration(10_000))
+        assertEquals("3天19時後重置", Format.resetText(now + 91 * hour, now, short = true))
         assertNull(Aggregator.mergedView(Provider.OPENAI, AppState(), now))
     }
 }

@@ -33,9 +33,9 @@ Sign-in pages open in an incognito Custom Tab by default, so adding a second acc
 - The account list, settings and latest usage are stored in the app's private storage; tokens are in a separate file encrypted with a Keystore key.
 - Data is excluded from cloud backup and device transfer.
 
-## Requirements
+## Install
 
-Android 8.0 (API 26) or later.
+Download the APK from [Releases](https://github.com/mamekyo/UsageTracker/releases/latest) and open it on the phone, allowing installs from unknown sources when asked. Requires Android 8.0 (API 26) or later.
 
 ## Build
 
@@ -64,3 +64,7 @@ app/src/main/java/com/mamekyo/usagetracker/
 ## Disclaimer
 
 This is an unofficial project, not affiliated with or endorsed by OpenAI or Anthropic. Usage data comes from the undocumented endpoints used by Codex (`chatgpt.com/backend-api/wham/usage`) and Claude Code (`api.anthropic.com/api/oauth/usage`), so it may stop working temporarily when those services change.
+
+## License
+
+[MIT](LICENSE)

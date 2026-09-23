@@ -1,51 +1,66 @@
 # UsageTracker
 
-追蹤 OpenAI（ChatGPT Plus / Pro）與 Claude（Pro / Max）訂閱**剩餘用量**的 Android App，附主畫面小工具。
+An Android app with a home-screen widget that shows how much of your **OpenAI (ChatGPT / Codex)** and **Claude (Pro / Max)** subscription usage is left, and when each limit resets.
 
-## 功能
+## Features
 
-- **多帳號登入**：可同時登入多個 OpenAI、Claude 帳號；所有資料只存在手機本機，登入權杖以 Android Keystore 加密。
-- **自動偵測可追蹤的限制**
-  - OpenAI：5 小時限制、每週限制（以及官方回傳的其他模型額度，例如 Codex Spark）。
-  - Claude：5 小時限制、每週限制，以及 Fable 等模型的獨立每週限制。
-- **主畫面小工具**（白色卡片）：可選擇顯示「全部」、「單一供應商（多帳號合併）」或「單一帳號」，並有兩種樣式：
-  - **長條**：每個限制一列，含進度條、百分比與距離下次重置的時間，列會自動填滿小工具高度。
-  - **圓餅**：多個限制（例如 Claude 的 5 小時、每週、Fable）並排成一行環形圖，適合 4×1、4×2 等較小尺寸。
-- **多帳號合併**：同一家的多個帳號可合併顯示，數值為各帳號平均（例如一個帳號用完、另一個沒用 → 剩餘 50%），重置時間顯示最快的一個。每個帳號可在「帳號」頁決定是否納入合併。
-- **百分比顯示方式**：可切換「剩餘的 %」或「已使用的 %」。
-- **用量提醒**：可針對單一帳號或合併後的用量，設定某個限制（或全部限制）剩餘低於多少 % 時發送通知；重置回升後會自動重新啟用。
-- **背景更新**：每 15 分鐘～2 小時自動更新（Android 系統最短 15 分鐘）。
+- **Multiple accounts**: sign in to any number of OpenAI and Claude accounts. Everything stays on the phone, and sign-in tokens are encrypted with the Android Keystore.
+- **Detects the limits each plan has**
+  - OpenAI: 5-hour and weekly limits, plus extra per-model limits the service reports (e.g. GPT-5-Codex-Spark).
+  - Claude: 5-hour and weekly limits, plus model-specific weekly limits (e.g. Fable).
+- **Home-screen widget** that shows everything, one provider (accounts merged), or a single account, in two styles:
+  - **Bars**: one row per limit with a progress bar, percentage and time until reset; rows grow to fill the widget.
+  - **Rings**: the limits side by side as ring gauges, good for small (4×1, 4×2) widgets.
+  - A refresh button that turns into a spinner until the update finishes.
+- **Merge accounts**: several accounts of the same provider can be shown as one, using the average usage (one account used up and another unused shows 50% left) and the soonest reset. Each account can be left out of the merge.
+- **Remaining or used**: show percentages as what is left or as what is used.
+- **Alerts**: get notified when a limit (or any limit) of an account or a merged provider drops below a threshold. Each alert fires once and re-arms after the limit recovers, e.g. after a reset.
+- **Background refresh** every 15 minutes to 2 hours (15 minutes is Android's minimum).
+- **Languages**: English, Traditional Chinese, Simplified Chinese and Japanese. The app follows the system language by default and can be switched in Settings. On Android 13+ it is also available in the system's per-app language setting.
 
-## 登入方式
+## Sign-in
 
-| 供應商 | 方式 |
+| Provider | How |
 | --- | --- |
-| OpenAI | 瀏覽器登入（與 Codex CLI 相同的 OAuth 流程，完成後自動加入帳號）；或使用裝置代碼登入。 |
-| Claude | 瀏覽器登入並授權後自動加入帳號（與 Claude Code 相同的 OAuth 流程）；若未自動返回，可貼上網址列網址或授權碼。 |
+| OpenAI | Browser sign-in with the same OAuth flow as Codex CLI (the account is added automatically), or device-code sign-in. |
+| Claude | Browser sign-in with the same OAuth flow as Claude Code (the account is added automatically). If the browser does not return to the app, paste the address-bar URL or the code shown by Claude. |
 
-登入頁預設以「無痕分頁」開啟，方便登入第二個帳號而不沿用瀏覽器既有的登入狀態。
+Sign-in pages open in an incognito Custom Tab by default, so adding a second account doesn't reuse the browser's existing session.
 
-> 用量資料取自 OpenAI Codex（`chatgpt.com/backend-api/wham/usage`）與 Claude Code（`api.anthropic.com/api/oauth/usage`）使用的非公開介面，官方調整時可能暫時失效。
+## Privacy
 
-## 建置
+- No server of its own and no analytics: the app only talks to OpenAI's and Anthropic's sign-in and usage endpoints.
+- The account list, settings and latest usage are stored in the app's private storage; tokens are in a separate file encrypted with a Keystore key.
+- Data is excluded from cloud backup and device transfer.
 
-需求：JDK 17、Android SDK（platform 36、build-tools 36.0.0）。
+## Requirements
+
+Android 8.0 (API 26) or later.
+
+## Build
+
+Requires JDK 17 and the Android SDK (platform 36, build-tools 36.0.0).
 
 ```bash
-./gradlew assembleRelease      # 產出 app/build/outputs/apk/release/app-release.apk
-./gradlew testDebugUnitTest    # 單元測試
+./gradlew assembleRelease      # app/build/outputs/apk/release/app-release.apk
+./gradlew testDebugUnitTest    # unit tests
 ```
 
-Release 版使用本機 debug 金鑰簽署，方便直接側載安裝。
+The release build is signed with the local debug key so it can be sideloaded directly.
 
-## 專案結構
+## Project structure
 
 ```
 app/src/main/java/com/mamekyo/usagetracker/
-├── data/     資料模型、加密儲存（Store / SecureBox）
-├── net/      OpenAI、Claude OAuth 與用量 API
-├── domain/   更新流程、多帳號合併、提醒判斷、顯示格式
-├── work/     WorkManager 背景更新
-├── widget/   Glance 主畫面小工具與設定畫面
-└── ui/       Jetpack Compose 主程式畫面
+├── data/     models and encrypted storage (Store, SecureBox)
+├── net/      OpenAI and Claude OAuth and usage APIs
+├── domain/   refresh flow, account merging, alerts, formatting
+├── i18n/     app language selection and localized text
+├── work/     WorkManager background refresh
+├── widget/   Glance home-screen widget and its configuration screen
+└── ui/       Jetpack Compose app screens
 ```
+
+## Disclaimer
+
+This is an unofficial project, not affiliated with or endorsed by OpenAI or Anthropic. Usage data comes from the undocumented endpoints used by Codex (`chatgpt.com/backend-api/wham/usage`) and Claude Code (`api.anthropic.com/api/oauth/usage`), so it may stop working temporarily when those services change.

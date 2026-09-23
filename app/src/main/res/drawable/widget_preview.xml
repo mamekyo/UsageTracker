@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="220dp"
+    android:height="120dp"
+    android:viewportWidth="220"
+    android:viewportHeight="120">
+    <!-- card -->
+    <path
+        android:fillColor="#FFF3F5F7"
+        android:pathData="M16,0h188a16,16 0,0 1,16 16v88a16,16 0,0 1,-16 16h-188a16,16 0,0 1,-16 -16v-88a16,16 0,0 1,16 -16z" />
+    <!-- title -->
+    <path
+        android:fillColor="#FF3C4650"
+        android:pathData="M14,14h70a4,4 0,0 1,0 8h-70a4,4 0,0 1,0 -8z" />
+    <!-- row 1 -->
+    <path android:fillColor="#FFDCE1E6" android:pathData="M14,40h192a4,4 0,0 1,0 8h-192a4,4 0,0 1,0 -8z" />
+    <path android:fillColor="#FF34A853" android:pathData="M14,40h140a4,4 0,0 1,0 8h-140a4,4 0,0 1,0 -8z" />
+    <!-- row 2 -->
+    <path android:fillColor="#FFDCE1E6" android:pathData="M14,68h192a4,4 0,0 1,0 8h-192a4,4 0,0 1,0 -8z" />
+    <path android:fillColor="#FFF9A825" android:pathData="M14,68h80a4,4 0,0 1,0 8h-80a4,4 0,0 1,0 -8z" />
+    <!-- row 3 -->
+    <path android:fillColor="#FFDCE1E6" android:pathData="M14,96h192a4,4 0,0 1,0 8h-192a4,4 0,0 1,0 -8z" />
+    <path android:fillColor="#FFE53935" android:pathData="M14,96h28a4,4 0,0 1,0 8h-28a4,4 0,0 1,0 -8z" />
+</vector>

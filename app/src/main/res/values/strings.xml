@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">UsageTracker</string>
+    <string name="widget_name">AI 剩餘用量</string>
+    <string name="widget_description">顯示 OpenAI / Claude 訂閱的剩餘用量與重置時間</string>
+</resources>
